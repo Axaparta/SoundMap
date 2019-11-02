@@ -1,0 +1,6 @@
+syntax: glob
+.vs/
+.hg/
+bin/
+obj/
+packages/
