@@ -12,12 +12,13 @@ namespace SoundMap
 {
 	public class SoundControl : Control
 	{
-		#region struct RenderPoint
-		private struct RenderPoint
+		#region class RenderPoint
+		private class RenderPoint
 		{
 			private const double Radius = 7;
 			private Geometry Region { get; }
 			private Point Center { get; }
+			private Rect Bounds { get; }
 
 			public SoundPoint Link { get; }
 
@@ -27,6 +28,7 @@ namespace SoundMap
 				Center = ACenter;
 				Region = new EllipseGeometry(ACenter, Radius, Radius);
 				Region.Freeze();
+				Bounds = new Rect(ACenter.X - Radius, ACenter.Y - Radius, Radius * 2, Radius * 2);
 			}
 
 			public void DrawTo(DrawingContext drawingContext)
@@ -39,6 +41,11 @@ namespace SoundMap
 			public bool Contain(Point APoint)
 			{
 				return Region.FillContains(APoint);
+			}
+
+			public bool Inside(Rect ARect)
+			{
+				return !Rect.Intersect(ARect, Bounds).IsEmpty;
 			}
 		}
 		#endregion
@@ -54,17 +61,20 @@ namespace SoundMap
 		#endregion
 
 		private readonly List<RenderPoint> FRenderPoints = new List<RenderPoint>();
-		private RenderPoint? FHoldPoint = null;
+		private readonly List<RenderPoint> FSelectedPoints = new List<RenderPoint>();
+		private RenderPoint FHoldPoint = null;
 		private Point FDownPoint;
 		private Point FDownRelative;
 		private HVStatus FHVControl = HVStatus.Off;
 		private readonly Pen FHVPen;
+		private Rect FSelectedRect = Rect.Empty;
 
 		public SoundControl()
 		{
 			ClipToBounds = true;
 			SnapsToDevicePixels = true;
 			Focusable = true;
+
 			FHVPen = new Pen(SystemColors.ControlDarkBrush, 1);
 			FHVPen.DashStyle = new DashStyle(new double[] { 1, 3 }, 0);
 			FHVPen.Freeze();
@@ -136,6 +146,7 @@ namespace SoundMap
 				drawingContext.DrawRectangle(SystemColors.WindowBrush, null, actualBounds);
 
 			FRenderPoints.Clear();
+			FSelectedPoints.Clear();
 
 			if (Points != null)
 				foreach (var p in Points)
@@ -153,21 +164,29 @@ namespace SoundMap
 					var rp = new RenderPoint(c, p);
 					rp.DrawTo(drawingContext);
 					FRenderPoints.Add(rp);
+
+					if (p.IsSelected)
+						FSelectedPoints.Add(rp);
 				}
+
+			drawingContext.DrawRectangle(null, FHVPen, FSelectedRect);
 		}
 
-		protected SoundPoint FirstSelectedPoint
-		{
-			get
-			{
-				return Points.FirstOrDefault(sp => sp.IsSelected);
-			}
-			set
-			{
-				foreach (var pts in Points)
-					pts.IsSelected = pts == value;
-			}
-		}
+		//protected SoundPoint FirstSelectedPoint
+		//{
+		//	get
+		//	{
+		//		var l = FSelectedPoints.FirstOrDefault();
+		//		if (l == null)
+		//			return null;
+		//		return l.Link;
+		//	}
+		//	set
+		//	{
+		//		foreach (var pts in Points)
+		//			pts.IsSelected = pts == value;
+		//	}
+		//}
 
 		protected override void OnGotFocus(RoutedEventArgs e)
 		{
@@ -181,7 +200,7 @@ namespace SoundMap
 			InvalidateVisual();
 		}
 
-		private RenderPoint? GetPointAtMouse(Point APoint)
+		private RenderPoint GetPointAtMouse(Point APoint)
 		{
 			foreach (var rp in FRenderPoints)
 				if (rp.Contain(APoint))
@@ -193,13 +212,13 @@ namespace SoundMap
 		{
 			var p = e.GetPosition(this);
 
-			RenderPoint? toDelete = GetPointAtMouse(p);
+			RenderPoint toDelete = GetPointAtMouse(p);
 
 			try
 			{
-				if (toDelete.HasValue && (DeletePointEvent != null))
+				if ((toDelete != null) && (DeletePointEvent != null))
 				{
-					DeletePointEvent.Invoke(toDelete.Value.Link);
+					DeletePointEvent.Invoke(toDelete.Link);
 					return;
 				}
 
@@ -207,7 +226,8 @@ namespace SoundMap
 				{
 					var newPoint = new SoundPoint(p.X / ActualWidth, p.Y / ActualHeight);
 					AddPointEvent.Invoke(newPoint);
-					FirstSelectedPoint = newPoint;
+					foreach (var pts in Points)
+						pts.IsSelected = pts == newPoint;
 				}
 			}
 			finally
@@ -222,14 +242,18 @@ namespace SoundMap
 			if (e.LeftButton == MouseButtonState.Pressed)
 			{
 				var p = e.GetPosition(this);
-				FHoldPoint = GetPointAtMouse(p);
-				if (FHoldPoint.HasValue)
-				{
-					FDownPoint = p;
-					FDownRelative = FHoldPoint.Value.Link.Relative;
+				FDownPoint = p;
+				FSelectedRect = Rect.Empty;
 
-					FirstSelectedPoint = FHoldPoint.Value.Link;
-				}
+				//FHoldPoint = GetPointAtMouse(p);
+				if (FHoldPoint != null)
+					FDownRelative = FHoldPoint.Link.Relative;
+				сохранить исходные точки всех выделенных точек!
+				else
+					foreach (var pts in Points)
+						pts.IsSelected = false;
+
+				InvalidateVisual();
 			}
 
 			Keyboard.Focus(this);
@@ -239,11 +263,11 @@ namespace SoundMap
 
 		protected override void OnMouseMove(MouseEventArgs e)
 		{
-			if (FHoldPoint.HasValue)
-			{
-				var p = e.GetPosition(this);
-				var pixelOffset = p - FDownPoint;
+			var p = e.GetPosition(this);
+			var pixelOffset = p - FDownPoint;
 
+			if (FHoldPoint != null)
+			{
 				if (FHVControl != HVStatus.Off)
 				{
 					if (FHVControl == HVStatus.Undefined)
@@ -259,10 +283,34 @@ namespace SoundMap
 					else
 						pixelOffset.X = 0;
 				}
-
 				var relativeOffset = new Vector(pixelOffset.X / ActualWidth, pixelOffset.Y / ActualHeight);
-				FHoldPoint.Value.Link.Relative = Point.Add(FDownRelative, relativeOffset);
+				FHoldPoint.Link.Relative = Point.Add(FDownRelative, relativeOffset);
 				InvalidateVisual();
+			}
+			else
+			{
+				if (e.LeftButton == MouseButtonState.Pressed)
+				{
+					var rl = FDownPoint.X;
+					var rt = FDownPoint.Y;
+					var rw = pixelOffset.X;
+					var rh = pixelOffset.Y;
+
+					if (rw < 0)
+					{
+						rl += rw;
+						rw = -rw;
+					}
+
+					if (rh < 0)
+					{
+						rt += rh;
+						rh = -rh;
+					}
+
+					FSelectedRect = new Rect(rl, rt, rw, rh);
+					InvalidateVisual();
+				}
 			}
 
 			e.Handled = true;
@@ -272,17 +320,58 @@ namespace SoundMap
 		protected override void OnMouseUp(MouseButtonEventArgs e)
 		{
 			if (e.LeftButton == MouseButtonState.Released)
+			{
 				FHoldPoint = null;
+				if (!FSelectedRect.IsEmpty)
+				{
+					foreach (var rp in FRenderPoints)
+						rp.Link.IsSelected = rp.Inside(FSelectedRect);
+					FSelectedRect = Rect.Empty;
+					InvalidateVisual();
+				}
+			}
 			base.OnMouseUp(e);
 		}
 
 		protected override void OnKeyDown(KeyEventArgs e)
 		{
-			if (((e.Key == Key.LeftShift) || (e.Key == Key.RightShift)) && !e.IsRepeat)
+			switch (e.Key)
 			{
-				FHVControl = HVStatus.Undefined;
-				InvalidateVisual();
+				case Key.LeftShift:
+				case Key.RightShift:
+					if (!e.IsRepeat)
+					{
+						e.Handled = true;
+						FHVControl = HVStatus.Undefined;
+						InvalidateVisual();
+					}
+					break;
+				case Key.Left:
+					foreach (var p in FSelectedPoints)
+						if (p.Link.IsSelected)
+							p.Link.Relative = new Point(p.Link.Relative.X - 1 / ActualWidth, p.Link.Relative.Y);
+					e.Handled = true;
+					break;
+				case Key.Right:
+					foreach (var p in FSelectedPoints)
+						if (p.Link.IsSelected)
+							p.Link.Relative = new Point(p.Link.Relative.X + 1 / ActualWidth, p.Link.Relative.Y);
+					e.Handled = true;
+					break;
+				case Key.Up:
+					foreach (var p in FSelectedPoints)
+						if (p.Link.IsSelected)
+							p.Link.Relative = new Point(p.Link.Relative.X, p.Link.Relative.Y - 1 / ActualHeight);
+					e.Handled = true;
+					break;
+				case Key.Down:
+					foreach (var p in FSelectedPoints)
+						if (p.Link.IsSelected)
+							p.Link.Relative = new Point(p.Link.Relative.X, p.Link.Relative.Y + 1 / ActualHeight);
+					e.Handled = true;
+					break;
 			}
+
 			base.OnKeyDown(e);
 		}
 
@@ -293,6 +382,7 @@ namespace SoundMap
 				FHVControl = HVStatus.Off;
 				InvalidateVisual();
 			}
+
 			base.OnKeyUp(e);
 		}
 	}

@@ -70,6 +70,11 @@ namespace SoundMap
 			}
 		}
 
+		/// <summary>
+		/// Необходима для группового перемещения
+		/// </summary>
+		public Point StartRelative { get; set; }
+
 		object ICloneable.Clone()
 		{
 			return Clone();
