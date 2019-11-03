@@ -61,10 +61,9 @@ namespace SoundMap
 		#endregion
 
 		private readonly List<RenderPoint> FRenderPoints = new List<RenderPoint>();
-		private readonly List<RenderPoint> FSelectedPoints = new List<RenderPoint>();
-		private RenderPoint FHoldPoint = null;
+		private readonly SoundPointCollection FSelectedPoints = new SoundPointCollection();
+		private bool FIsMoveMode = false;
 		private Point FDownPoint;
-		private Point FDownRelative;
 		private HVStatus FHVControl = HVStatus.Off;
 		private readonly Pen FHVPen;
 		private Rect FSelectedRect = Rect.Empty;
@@ -111,6 +110,7 @@ namespace SoundMap
 
 		private void Points_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
 		{
+			UpdateSelectedPoints();
 			InvalidateVisual();
 		}
 
@@ -146,7 +146,6 @@ namespace SoundMap
 				drawingContext.DrawRectangle(SystemColors.WindowBrush, null, actualBounds);
 
 			FRenderPoints.Clear();
-			FSelectedPoints.Clear();
 
 			if (Points != null)
 				foreach (var p in Points)
@@ -164,29 +163,10 @@ namespace SoundMap
 					var rp = new RenderPoint(c, p);
 					rp.DrawTo(drawingContext);
 					FRenderPoints.Add(rp);
-
-					if (p.IsSelected)
-						FSelectedPoints.Add(rp);
 				}
 
 			drawingContext.DrawRectangle(null, FHVPen, FSelectedRect);
 		}
-
-		//protected SoundPoint FirstSelectedPoint
-		//{
-		//	get
-		//	{
-		//		var l = FSelectedPoints.FirstOrDefault();
-		//		if (l == null)
-		//			return null;
-		//		return l.Link;
-		//	}
-		//	set
-		//	{
-		//		foreach (var pts in Points)
-		//			pts.IsSelected = pts == value;
-		//	}
-		//}
 
 		protected override void OnGotFocus(RoutedEventArgs e)
 		{
@@ -245,13 +225,31 @@ namespace SoundMap
 				FDownPoint = p;
 				FSelectedRect = Rect.Empty;
 
-				//FHoldPoint = GetPointAtMouse(p);
-				if (FHoldPoint != null)
-					FDownRelative = FHoldPoint.Link.Relative;
-				сохранить исходные точки всех выделенных точек!
-				else
+				var hp = GetPointAtMouse(p);
+				if (hp == null)
+				{
+					// Если жмётся пустое место, то снять все выделения
+					Points.ChangedLock();
 					foreach (var pts in Points)
 						pts.IsSelected = false;
+					Points.ChangedUnlock();
+				}
+				else
+				{
+					// Если выбирается невыделенный, то сбросить выделения других
+					if (!hp.Link.IsSelected)
+					{
+						Points.ChangedLock();
+						foreach (var pts in Points)
+							pts.IsSelected = pts == hp.Link;
+						Points.ChangedUnlock();
+					}
+
+					foreach (var pts in FSelectedPoints)
+						pts.StartRelative = pts.Relative;
+
+					FIsMoveMode = true;
+				}
 
 				InvalidateVisual();
 			}
@@ -261,12 +259,20 @@ namespace SoundMap
 			base.OnMouseDown(e);
 		}
 
+		private void UpdateSelectedPoints()
+		{
+			FSelectedPoints.Clear();
+			foreach (var p in Points)
+				if (p.IsSelected)
+					FSelectedPoints.Add(p);
+		}
+
 		protected override void OnMouseMove(MouseEventArgs e)
 		{
 			var p = e.GetPosition(this);
 			var pixelOffset = p - FDownPoint;
 
-			if (FHoldPoint != null)
+			if (FIsMoveMode)
 			{
 				if (FHVControl != HVStatus.Off)
 				{
@@ -283,8 +289,14 @@ namespace SoundMap
 					else
 						pixelOffset.X = 0;
 				}
+
 				var relativeOffset = new Vector(pixelOffset.X / ActualWidth, pixelOffset.Y / ActualHeight);
-				FHoldPoint.Link.Relative = Point.Add(FDownRelative, relativeOffset);
+
+				Points.ChangedLock();
+				foreach (var pts in FSelectedPoints)
+					pts.Relative = Point.Add(pts.StartRelative, relativeOffset);
+				Points.ChangedUnlock(true);
+
 				InvalidateVisual();
 			}
 			else
@@ -321,11 +333,14 @@ namespace SoundMap
 		{
 			if (e.LeftButton == MouseButtonState.Released)
 			{
-				FHoldPoint = null;
+				FIsMoveMode = false;
 				if (!FSelectedRect.IsEmpty)
 				{
+					Points.ChangedLock();
 					foreach (var rp in FRenderPoints)
 						rp.Link.IsSelected = rp.Inside(FSelectedRect);
+					Points.ChangedUnlock();
+
 					FSelectedRect = Rect.Empty;
 					InvalidateVisual();
 				}
@@ -347,27 +362,35 @@ namespace SoundMap
 					}
 					break;
 				case Key.Left:
+					Points.ChangedLock();
 					foreach (var p in FSelectedPoints)
-						if (p.Link.IsSelected)
-							p.Link.Relative = new Point(p.Link.Relative.X - 1 / ActualWidth, p.Link.Relative.Y);
+						if (p.IsSelected)
+							p.Relative = new Point(p.Relative.X - 1 / ActualWidth, p.Relative.Y);
+					Points.ChangedUnlock();
 					e.Handled = true;
 					break;
 				case Key.Right:
+					Points.ChangedLock();
 					foreach (var p in FSelectedPoints)
-						if (p.Link.IsSelected)
-							p.Link.Relative = new Point(p.Link.Relative.X + 1 / ActualWidth, p.Link.Relative.Y);
+						if (p.IsSelected)
+							p.Relative = new Point(p.Relative.X + 1 / ActualWidth, p.Relative.Y);
+					Points.ChangedUnlock();
 					e.Handled = true;
 					break;
 				case Key.Up:
+					Points.ChangedLock();
 					foreach (var p in FSelectedPoints)
-						if (p.Link.IsSelected)
-							p.Link.Relative = new Point(p.Link.Relative.X, p.Link.Relative.Y - 1 / ActualHeight);
+						if (p.IsSelected)
+							p.Relative = new Point(p.Relative.X, p.Relative.Y - 1 / ActualHeight);
+					Points.ChangedUnlock();
 					e.Handled = true;
 					break;
 				case Key.Down:
+					Points.ChangedLock();
 					foreach (var p in FSelectedPoints)
-						if (p.Link.IsSelected)
-							p.Link.Relative = new Point(p.Link.Relative.X, p.Link.Relative.Y + 1 / ActualHeight);
+						if (p.IsSelected)
+							p.Relative = new Point(p.Relative.X, p.Relative.Y + 1 / ActualHeight);
+					Points.ChangedUnlock();
 					e.Handled = true;
 					break;
 			}
