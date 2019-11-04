@@ -12,37 +12,41 @@
 	<Window.Background>
 		<SolidColorBrush Color="{DynamicResource {x:Static SystemColors.ControlColorKey}}"/>
 	</Window.Background>
-	<Grid>
-		<Grid.RowDefinitions>
-			<RowDefinition Height="1*"/>
-			<RowDefinition Height="1*"/>
-		</Grid.RowDefinitions>
-		<Grid.ColumnDefinitions>
-			<ColumnDefinition Width="*"/>
-			<ColumnDefinition Width="150"/>
-		</Grid.ColumnDefinitions>
+	<DockPanel>
+		<Menu DockPanel.Dock="Top">
+			<MenuItem Header="File" />
+		</Menu>
+		<Grid>
+			<Grid.RowDefinitions>
+				<RowDefinition Height="1*"/>
+				<RowDefinition Height="1*"/>
+			</Grid.RowDefinitions>
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="*"/>
+				<ColumnDefinition Width="150"/>
+			</Grid.ColumnDefinitions>
 
-		<DockPanel Margin="5" Grid.Column="1" LastChildFill="False" Grid.RowSpan="2">
-			<ComboBox
+			<DockPanel Margin="5" Grid.Column="1" LastChildFill="False" Grid.RowSpan="2">
+				<ComboBox
 				Margin="0, 0, 0, 5"
 				DockPanel.Dock="Top"
 				ItemsSource="{Binding Devices}"
 				SelectedItem="{Binding SelectedDevice}" />
 
-			<Button
+				<Button
 				Margin="0, 0, 0, 5"
 				DockPanel.Dock="Top" Content="Start/Stop" Command="{Binding StartStopCommand}" />
-			
-			<Button
+
+				<Button
 				Margin="0, 0, 0, 5"
 				DockPanel.Dock="Top" Content="Save..." Command="{Binding SaveCommand}" />
-			
-			<Button
+
+				<Button
 				Margin="0, 0, 0, 5"
 				DockPanel.Dock="Top" Content="Load..." Command="{Binding LoadCommand}" />
-		</DockPanel>
+			</DockPanel>
 
-		<local:SoundControl
+			<local:SoundControl
 			AddPointEvent ="{Binding SoundControlAddPoint}"
 			DeletePointEvent="{Binding SoundControlDeletePoint}"
 			SnapsToDevicePixels="True"
@@ -51,17 +55,19 @@
 			Grid.Column="0"
 			/>
 
-		<ListBox
+			<ListBox
 			Grid.Row="1"
 			HorizontalAlignment="Left"
 			Margin="5, 0, 5, 5"
 			Width="150"
 			ItemsSource="{Binding Points}" />
 
-		<Button
+			<Button
 			Command="{Binding ClearCommand}"
 			Grid.Row="1"
 			HorizontalAlignment="Left"
 			Content="Clear" Margin="160,0,0,180" Width="82" />
-	</Grid>
+		</Grid>
+	</DockPanel>
+	
 </Window>
