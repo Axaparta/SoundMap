@@ -9,7 +9,7 @@
 	Closed="Window_Closed"
 	Loaded="Window_Loaded"
 	WindowStartupLocation="CenterScreen"
-	Title="SoundMap"
+	Title="{Binding Project.Title, FallbackValue={x:Static local:App.AppName}}"
 	Name="This"
 	Height="450" Width="800">
 	<Window.Background>
@@ -18,14 +18,17 @@
 	<Window.InputBindings>
 		<KeyBinding Key="Pause" Command="{Binding IsPauseCommand}"/>
 		<KeyBinding Key="Esc" Command="{Binding ExitCommand}"/>
+		
+		<KeyBinding Key="N" Modifiers="Ctrl" Command="{Binding NewProjectCommand}"/>
+		<KeyBinding Key="S" Modifiers="Ctrl" Command="{Binding SaveProjectCommand}"/>
 	</Window.InputBindings>
 	<DockPanel>
 		<Menu DockPanel.Dock="Top">
 			<MenuItem Header="File">
-				<MenuItem Header="New project" Command="{Binding NewProjectCommand}" />
+				<MenuItem Header="New project" InputGestureText="Ctrl+N" Command="{Binding NewProjectCommand}" />
 				<MenuItem Header="Open project..." />
-				<MenuItem Header="Save project" />
-				<MenuItem Header="Save project as..." />
+				<MenuItem Header="Save project" InputGestureText="Ctrl+S" Command="{Binding SaveProjectCommand}" />
+				<MenuItem Header="Save project as..." Command="{Binding SaveProjectAsCommand}" />
 				<Separator />
 				<MenuItem Header="Exit" InputGestureText="Esc" Command="{Binding ExitCommand}" />
 			</MenuItem>

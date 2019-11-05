@@ -1,6 +1,7 @@
 ﻿using NAudio.CoreAudioApi;
 using NAudio.Wave;
 using System;
+using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 
@@ -30,7 +31,8 @@ namespace SoundMap
 		private WasapiOut FOut = null;
 
 		private RelayCommand FLoadCommand = null;
-		private RelayCommand FSaveCommand = null;
+		private RelayCommand FSaveProjectCommand = null;
+		private RelayCommand FSaveProjectAsCommand = null;
 		private RelayCommand FExitCommand = null;
 		private RelayCommand FNewProjectCommand = null;
 		private RelayCommand FDeviceMenuItemCommand = null;
@@ -54,9 +56,14 @@ namespace SoundMap
 			get => FProject;
 			set
 			{
-				StopPlay();
+				if (!IsPause)
+					StopPlay();
+
 				FProject = value;
-				StartPlay();
+
+				if (!IsPause)
+					StartPlay();
+
 				NotifyPropertyChanged(nameof(Project));
 			}
 		}
@@ -176,27 +183,43 @@ namespace SoundMap
 			}
 		}
 
-		public RelayCommand SaveCommand
+		public RelayCommand SaveProjectCommand
 		{
 			get
 			{
-				if (FSaveCommand == null)
-					FSaveCommand = new RelayCommand((obj) =>
+				if (FSaveProjectCommand == null)
+					FSaveProjectCommand = new RelayCommand((obj) =>
 					{
-						//try
-						//{
-						//	SaveFileDialog dlg = new SaveFileDialog();
-						//	dlg.Filter = "SoundMap files (*.smx)|*.smx";
-						//	dlg.FilterIndex = 1;
-						//	if (dlg.ShowDialog() == DialogResult.OK)
-						//		XmlHelper.Save(Points.ToArray(), dlg.FileName);
-						//}
-						//catch (Exception ex)
-						//{
-						//	App.ShowError(ex.Message);
-						//}
+						if (string.IsNullOrEmpty(Project.FileName))
+							SaveProjectAsCommand.Execute(null);
+						else
+							Project.SaveToFile(Project.FileName);
 					});
-				return FSaveCommand;
+				return FSaveProjectCommand;
+			}
+		}
+
+		public RelayCommand SaveProjectAsCommand
+		{
+			get
+			{
+				if (FSaveProjectAsCommand == null)
+					FSaveProjectAsCommand = new RelayCommand((obj) =>
+					{
+						using (SaveFileDialog dlg = new SaveFileDialog())
+						{
+							if (!string.IsNullOrEmpty(Project.FileName))
+							{
+								dlg.InitialDirectory = Path.GetFullPath(Project.FileName);
+								dlg.FileName = Path.GetFileName(Project.FileName);
+							}
+							dlg.Filter = "SoundMap projectAs (*.smp)|*.smp";
+							dlg.FilterIndex = 1;
+							if (dlg.ShowDialog() == DialogResult.OK)
+								Project.SaveToFile(dlg.FileName);
+						}
+					});
+				return FSaveProjectAsCommand;
 			}
 		}
 
@@ -207,7 +230,7 @@ namespace SoundMap
 				if (FNewProjectCommand == null)
 					FNewProjectCommand = new RelayCommand((obj) =>
 					{
-
+						Project = new SoundProject();
 					});
 				return FNewProjectCommand;
 			}
@@ -222,11 +245,13 @@ namespace SoundMap
 					{
 						if (!IsPause)
 							StopPlay();
-						var dmi = obj as DeviceMenuItem;
-						SelectedDeviceId = dmi.Device.ID;
-						NotifyPropertyChanged(nameof(Devices));
+
+						SelectedDeviceId = (obj as DeviceMenuItem).Device.ID;
+						
 						if (!IsPause)
 							StartPlay();
+
+						NotifyPropertyChanged(nameof(Devices));
 					});
 				return FDeviceMenuItemCommand;
 			}

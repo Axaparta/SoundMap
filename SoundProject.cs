@@ -1,17 +1,25 @@
 ﻿using NAudio.Wave;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
+using System.Xml.Serialization;
 
 namespace SoundMap
 {
-	public class SoundProject: ISampleProvider
+	[Serializable]
+	public class SoundProject: Observable, ISampleProvider
 	{
+		[XmlIgnore]
 		public WaveFormat WaveFormat { get; private set; }
 		private double FTime = 0;
 
+		[XmlIgnore]
 		public SoundPointCollection Points { get; } = new SoundPointCollection();
+
+		[XmlIgnore]
+		public string FileName { get; set; }
 
 		private Action<SoundPoint> FSoundControlAddPointAction = null;
 		private Action<SoundPoint> FSoundControlDeletePointAction = null;
@@ -19,6 +27,18 @@ namespace SoundMap
 		public SoundProject()
 		{
 			Points.CollectionChanged += Points_CollectionChanged;
+		}
+
+		[XmlElement(ElementName="Points")]
+		public SoundPoint[] SerializePoints
+		{
+			get => Points.ToArray();
+			set
+			{
+				Points.Clear();
+				foreach (var p in value)
+					Points.Add(p);
+			}
 		}
 
 		private void Points_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
@@ -31,6 +51,17 @@ namespace SoundMap
 			WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(ASampleRate, AChannels);
 			FTime = 0;
 		}
+
+		public string Title
+		{
+			get
+			{
+				if (string.IsNullOrEmpty(FileName))
+					return App.AppName;
+				return $"{App.AppName} [{Path.GetFileNameWithoutExtension(FileName)}]";
+			}
+		}
+
 
 		public int Read(float[] buffer, int offset, int count)
 		{
@@ -80,25 +111,12 @@ namespace SoundMap
 			return r;
 		}
 
-		//public void SetPoints(SoundPointCollection APoints)
-		//{
-		//	lock (FPointsLock)
-		//	{
-		//		FNewPoints = APoints.Select(p => p.Clone()).ToArray();
-		//	}
-		//}
-
 		public Action<SoundPoint> SoundControlAddPointAction
 		{
 			get
 			{
 				if (FSoundControlAddPointAction == null)
-				{
-					FSoundControlAddPointAction = new Action<SoundPoint>((sp) =>
-					{
-						Points.AddSoundPoint(sp);
-					});
-				}
+					FSoundControlAddPointAction = new Action<SoundPoint>((sp) => Points.AddSoundPoint(sp));
 				return FSoundControlAddPointAction;
 			}
 		}
@@ -108,13 +126,22 @@ namespace SoundMap
 			get
 			{
 				if (FSoundControlDeletePointAction == null)
-				{
-					FSoundControlDeletePointAction = new Action<SoundPoint>((sp) =>
-					{
-						Points.RemoveSoundPoint(sp);
-					});
-				}
+					FSoundControlDeletePointAction = new Action<SoundPoint>((sp) => Points.RemoveSoundPoint(sp));
 				return FSoundControlDeletePointAction;
+			}
+		}
+
+		public void SaveToFile(string AFileName)
+		{
+			try
+			{
+				XmlHelper.Save(this, AFileName);
+				FileName = AFileName;
+				NotifyPropertyChanged(nameof(Title));
+			}
+			catch (Exception ex)
+			{
+				App.ShowError(ex.Message);
 			}
 		}
 	}

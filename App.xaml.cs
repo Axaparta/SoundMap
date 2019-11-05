@@ -10,7 +10,7 @@ namespace SoundMap
 	/// </summary>
 	public partial class App : Application
 	{
-		public const string AppName = "SoundMap";
+		public static string AppName { get; } = "SoundMap";
 		public static readonly string ConfigurePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppName);
 		public static readonly string SettingsFileName = Path.Combine(ConfigurePath, "Settings.xml");
 		public static SoundMapSettings Settings { get; private set; }
