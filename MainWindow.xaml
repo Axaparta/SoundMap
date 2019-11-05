@@ -12,9 +12,19 @@
 	<Window.Background>
 		<SolidColorBrush Color="{DynamicResource {x:Static SystemColors.ControlColorKey}}"/>
 	</Window.Background>
+	<Window.InputBindings>
+		<KeyBinding Key="Esc" Command="{Binding ExitCommand}"/>
+	</Window.InputBindings>
 	<DockPanel>
 		<Menu DockPanel.Dock="Top">
-			<MenuItem Header="File" />
+			<MenuItem Header="File">
+				<MenuItem Header="New project" Command="{Binding NewProjectCommand}" />
+				<MenuItem Header="Open project..." />
+				<MenuItem Header="Save project" />
+				<MenuItem Header="Save project as..." />
+				<Separator />
+				<MenuItem Header="Exit" InputGestureText="Esc" Command="{Binding ExitCommand}" />
+			</MenuItem>
 		</Menu>
 		<Grid>
 			<Grid.RowDefinitions>
@@ -47,13 +57,12 @@
 			</DockPanel>
 
 			<local:SoundControl
-			AddPointEvent ="{Binding SoundControlAddPoint}"
-			DeletePointEvent="{Binding SoundControlDeletePoint}"
-			SnapsToDevicePixels="True"
-			Points="{Binding Points}"
-			Margin="5, 5, 0, 5"
-			Grid.Column="0"
-			/>
+				AddPointEvent ="{Binding SoundControlAddPointAction}"
+				DeletePointEvent="{Binding SoundControlDeletePointAction}"
+				SnapsToDevicePixels="True"
+				Points="{Binding Points}"
+				Margin="5, 5, 0, 5"
+				Grid.Column="0" />
 
 			<ListBox
 			Grid.Row="1"

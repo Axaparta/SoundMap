@@ -15,11 +15,13 @@ namespace SoundMap
 		private RelayCommand FLoadCommand = null;
 		private RelayCommand FSaveCommand = null;
 		private RelayCommand FClearCommand = null;
+		private RelayCommand FExitCommand = null;
+		private RelayCommand FNewProjectCommand = null;
 
 		private SoundGenerator FGenerator = null;
 		private WasapiOut FOut = null;
-		private Action<SoundPoint> FSoundControlAddPoint = null;
-		private Action<SoundPoint> FSoundControlDeletePoint = null;
+		private Action<SoundPoint> FSoundControlAddPointAction = null;
+		private Action<SoundPoint> FSoundControlDeletePointAction = null;
 
 		public SoundPointCollection Points { get; } = new SoundPointCollection();
 
@@ -86,33 +88,33 @@ namespace SoundMap
 				StartStopCommand.Execute(null);
 		}
 
-		public Action<SoundPoint> SoundControlAddPoint
+		public Action<SoundPoint> SoundControlAddPointAction
 		{
 			get
 			{
-				if (FSoundControlAddPoint == null)
+				if (FSoundControlAddPointAction == null)
 				{
-					FSoundControlAddPoint = new Action<SoundPoint>((sp) =>
+					FSoundControlAddPointAction = new Action<SoundPoint>((sp) =>
 					{
 						Points.AddSoundPoint(sp);
 					});
 				}
-				return FSoundControlAddPoint;
+				return FSoundControlAddPointAction;
 			}
 		}
 
-		public Action<SoundPoint> SoundControlDeletePoint
+		public Action<SoundPoint> SoundControlDeletePointAction
 		{
 			get
 			{
-				if (FSoundControlDeletePoint == null)
+				if (FSoundControlDeletePointAction == null)
 				{
-					FSoundControlDeletePoint = new Action<SoundPoint>((sp) =>
+					FSoundControlDeletePointAction = new Action<SoundPoint>((sp) =>
 					{
 						Points.RemoveSoundPoint(sp);
 					});
 				}
-				return FSoundControlDeletePoint;
+				return FSoundControlDeletePointAction;
 			}
 		}
 
@@ -181,5 +183,27 @@ namespace SoundMap
 			}
 		}
 
+		public RelayCommand ExitCommand
+		{
+			get
+			{
+				if (FExitCommand == null)
+					FExitCommand = new RelayCommand((obj) => System.Windows.Application.Current.MainWindow.Close());
+				return FExitCommand;
+			}
+		}
+
+		public RelayCommand NewProjectCommand
+		{
+			get
+			{
+				if (FNewProjectCommand == null)
+					FNewProjectCommand = new RelayCommand((obj) =>
+					{
+
+					});
+				return FNewProjectCommand;
+			}
+		}
 	}
 }
