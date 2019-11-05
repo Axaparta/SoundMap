@@ -329,6 +329,11 @@ namespace SoundMap
 			base.OnMouseMove(e);
 		}
 
+		protected override void OnMouseLeave(MouseEventArgs e)
+		{
+			//OnMouseUp(new MouseButtonEventArgs(e.Device, e.Timestamp, e.MouseDevice.M)
+		}
+
 		protected override void OnMouseUp(MouseButtonEventArgs e)
 		{
 			if (e.LeftButton == MouseButtonState.Released)

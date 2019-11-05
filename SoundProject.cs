@@ -11,6 +11,8 @@ namespace SoundMap
 	[Serializable]
 	public class SoundProject: Observable, ISampleProvider
 	{
+		public static readonly string FileFilter = "SoundMap project (*.smp)|*.smp";
+
 		[XmlIgnore]
 		public WaveFormat WaveFormat { get; private set; }
 		private double FTime = 0;
@@ -24,9 +26,17 @@ namespace SoundMap
 		private Action<SoundPoint> FSoundControlAddPointAction = null;
 		private Action<SoundPoint> FSoundControlDeletePointAction = null;
 
+
 		public SoundProject()
 		{
 			Points.CollectionChanged += Points_CollectionChanged;
+		}
+
+		public static SoundProject CreateFromFile(string AFileName)
+		{
+			var r = XmlHelper.Load<SoundProject>(AFileName);
+			r.FileName = AFileName;
+			return r;
 		}
 
 		[XmlElement(ElementName="Points")]

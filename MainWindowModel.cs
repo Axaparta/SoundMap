@@ -30,7 +30,7 @@ namespace SoundMap
 		private readonly string FDefaultDeviceId = null;
 		private WasapiOut FOut = null;
 
-		private RelayCommand FLoadCommand = null;
+		private RelayCommand FOpenProjectCommand = null;
 		private RelayCommand FSaveProjectCommand = null;
 		private RelayCommand FSaveProjectAsCommand = null;
 		private RelayCommand FExitCommand = null;
@@ -155,31 +155,26 @@ namespace SoundMap
 			}
 		}
 
-		public RelayCommand LoadCommand
+		public RelayCommand OpenProjectCommand
 		{
 			get
 			{
-				if (FLoadCommand == null)
-					FLoadCommand = new RelayCommand((obj) =>
+				if (FOpenProjectCommand == null)
+					FOpenProjectCommand = new RelayCommand((obj) =>
 					{
-						//try
-						//{
-						//	OpenFileDialog dlg = new OpenFileDialog();
-						//	dlg.Filter = "SoundMap files (*.smx)|*.smx";
-						//	if (dlg.ShowDialog() == DialogResult.OK)
-						//	{
-						//		var pts = XmlHelper.Load<SoundPoint[]>(dlg.FileName);
-						//		Points.Clear();
-						//		foreach (var p in pts)
-						//			Points.AddSoundPoint(p);
-						//	}
-						//}
-						//catch (Exception ex)
-						//{
-						//	App.ShowError(ex.Message);
-						//}
+						try
+						{
+							OpenFileDialog dlg = new OpenFileDialog();
+							dlg.Filter = SoundProject.FileFilter;
+							if (dlg.ShowDialog() == DialogResult.OK)
+								Project = SoundProject.CreateFromFile(dlg.FileName);
+						}
+						catch (Exception ex)
+						{
+							App.ShowError(ex.Message);
+						}
 					});
-				return FLoadCommand;
+				return FOpenProjectCommand;
 			}
 		}
 
@@ -213,7 +208,7 @@ namespace SoundMap
 								dlg.InitialDirectory = Path.GetFullPath(Project.FileName);
 								dlg.FileName = Path.GetFileName(Project.FileName);
 							}
-							dlg.Filter = "SoundMap projectAs (*.smp)|*.smp";
+							dlg.Filter = SoundProject.FileFilter;
 							dlg.FilterIndex = 1;
 							if (dlg.ShowDialog() == DialogResult.OK)
 								Project.SaveToFile(dlg.FileName);
