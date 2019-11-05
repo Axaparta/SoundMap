@@ -1,120 +1,150 @@
 ﻿using NAudio.CoreAudioApi;
 using NAudio.Wave;
 using System;
-using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows.Forms;
 
 namespace SoundMap
 {
+
+	#region class DeviceMenuItem
+	public class DeviceMenuItem
+	{
+		public string Name => Device.FriendlyName;
+		public MMDevice Device { get; }
+
+		public bool Selected { get; set; }
+
+		public DeviceMenuItem(MMDevice ADevice, bool ASelected)
+		{
+			Device = ADevice;
+			Selected = ASelected;
+		}
+	}
+	#endregion
+
 	public class MainWindowModel: Observable
 	{
-		private MMDevice FDevice = null;
 		private MMDevice[] FDevices = null;
-		private RelayCommand FStartStopCommand = null;
+		private readonly string FDefaultDeviceId = null;
+		private WasapiOut FOut = null;
+
 		private RelayCommand FLoadCommand = null;
 		private RelayCommand FSaveCommand = null;
-		private RelayCommand FClearCommand = null;
 		private RelayCommand FExitCommand = null;
 		private RelayCommand FNewProjectCommand = null;
+		private RelayCommand FDeviceMenuItemCommand = null;
+		private RelayCommand FIsPauseCommand = null;
 
-		private SoundGenerator FGenerator = null;
-		private WasapiOut FOut = null;
-		private Action<SoundPoint> FSoundControlAddPointAction = null;
-		private Action<SoundPoint> FSoundControlDeletePointAction = null;
-
-		public SoundPointCollection Points { get; } = new SoundPointCollection();
+		private SoundProject FProject = new SoundProject();
+		private bool FIsPause = false;
 
 		public MainWindowModel()
 		{
 			using (var e = new MMDeviceEnumerator())
 			{
-				FDevice = e.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+				FDefaultDeviceId = e.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia).ID;
 				FDevices = e.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active).ToArray();
 			}
-
-			Points.CollectionChanged += Points_CollectionChanged;
+			StartPlay();
 		}
 
-		private void Points_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+		public SoundProject Project
 		{
-			if (FGenerator != null)
-				FGenerator.SetPoints(Points);
-		}
-
-		public string[] Devices => FDevices.Select(d => d.FriendlyName).ToArray();
-
-		public string SelectedDevice
-		{
-			get => FDevice.FriendlyName;
+			get => FProject;
 			set
 			{
-				FDevice = FDevices.FirstOrDefault(d => d.FriendlyName == value);
+				StopPlay();
+				FProject = value;
+				StartPlay();
+				NotifyPropertyChanged(nameof(Project));
 			}
 		}
 
-		public RelayCommand StartStopCommand
+		private void StartPlay()
+		{
+			var sd = SelectedDevice;
+			if ((FProject != null) && (sd != null))
+			{
+				FProject.ConfigureGenerator(sd.AudioClient.MixFormat.SampleRate, sd.AudioClient.MixFormat.Channels);
+				FOut = new WasapiOut(sd, AudioClientShareMode.Shared, true, 25);
+				FOut.Init(FProject);
+				FOut.Play();
+			}
+		}
+
+		private void StopPlay()
+		{
+			if (FOut != null)
+			{
+				FOut.Stop();
+				FOut.Dispose();
+				FOut = null;
+			}
+		}
+
+		public DeviceMenuItem[] Devices
 		{
 			get
 			{
-				if (FStartStopCommand == null)
+				var r = FDevices.Select(d => new DeviceMenuItem(d, d.ID == SelectedDeviceId)).ToArray();
+				return r;
+			}
+		}
+
+		public string SelectedDeviceId
+		{
+			get
+			{
+				var dev = FDevices.FirstOrDefault(d => d.ID == App.Settings.DeviceId);
+				if (dev == null)
+					return FDefaultDeviceId;
+				return dev.ID;
+			}
+			set
+			{
+				App.Settings.DeviceId = value;
+			}
+		}
+
+		public MMDevice SelectedDevice
+		{
+			get
+			{
+				var dn = SelectedDeviceId;
+				return FDevices.FirstOrDefault(d => d.ID == dn);
+			}
+		}
+
+		public bool IsPause
+		{
+			get => FIsPause;
+			set
+			{
+				if (FIsPause != value)
 				{
-					FStartStopCommand = new RelayCommand((obj) =>
-					{
-						if (FGenerator == null)
-						{
-							//FGenerator = new SoundGenerator(FDevice.AudioClient.MixFormat);
-							FGenerator = new SoundGenerator(WaveFormat.CreateIeeeFloatWaveFormat(FDevice.AudioClient.MixFormat.SampleRate, 2));
-							FGenerator.SetPoints(Points);
-							FOut = new WasapiOut(FDevice, AudioClientShareMode.Shared, true, 25);
-							FOut.Init(FGenerator);
-							FOut.Play();
-						}
-						else
-						{
-							FOut.Stop();
-							FOut.Dispose();
-							FGenerator = null;
-						}
-					});
+					FIsPause = value;
+					if (FIsPause)
+						StopPlay();
+					else
+						StartPlay();
+					NotifyPropertyChanged(nameof(IsPause));
 				}
-				return FStartStopCommand;
 			}
 		}
 
 		public void WindowClose()
 		{
-			if (FGenerator != null)
-				StartStopCommand.Execute(null);
+			StopPlay();
 		}
 
-		public Action<SoundPoint> SoundControlAddPointAction
+		public RelayCommand ExitCommand
 		{
 			get
 			{
-				if (FSoundControlAddPointAction == null)
-				{
-					FSoundControlAddPointAction = new Action<SoundPoint>((sp) =>
-					{
-						Points.AddSoundPoint(sp);
-					});
-				}
-				return FSoundControlAddPointAction;
-			}
-		}
-
-		public Action<SoundPoint> SoundControlDeletePointAction
-		{
-			get
-			{
-				if (FSoundControlDeletePointAction == null)
-				{
-					FSoundControlDeletePointAction = new Action<SoundPoint>((sp) =>
-					{
-						Points.RemoveSoundPoint(sp);
-					});
-				}
-				return FSoundControlDeletePointAction;
+				if (FExitCommand == null)
+					FExitCommand = new RelayCommand((obj) => System.Windows.Application.Current.MainWindow.Close());
+				return FExitCommand;
 			}
 		}
 
@@ -125,22 +155,22 @@ namespace SoundMap
 				if (FLoadCommand == null)
 					FLoadCommand = new RelayCommand((obj) =>
 					{
-						try
-						{
-							OpenFileDialog dlg = new OpenFileDialog();
-							dlg.Filter = "SoundMap files (*.smx)|*.smx";
-							if (dlg.ShowDialog() == DialogResult.OK)
-							{
-								var pts = XmlHelper.Load<SoundPoint[]>(dlg.FileName);
-								Points.Clear();
-								foreach (var p in pts)
-									Points.AddSoundPoint(p);
-							}
-						}
-						catch (Exception ex)
-						{
-							App.ShowError(ex.Message);
-						}
+						//try
+						//{
+						//	OpenFileDialog dlg = new OpenFileDialog();
+						//	dlg.Filter = "SoundMap files (*.smx)|*.smx";
+						//	if (dlg.ShowDialog() == DialogResult.OK)
+						//	{
+						//		var pts = XmlHelper.Load<SoundPoint[]>(dlg.FileName);
+						//		Points.Clear();
+						//		foreach (var p in pts)
+						//			Points.AddSoundPoint(p);
+						//	}
+						//}
+						//catch (Exception ex)
+						//{
+						//	App.ShowError(ex.Message);
+						//}
 					});
 				return FLoadCommand;
 			}
@@ -153,43 +183,20 @@ namespace SoundMap
 				if (FSaveCommand == null)
 					FSaveCommand = new RelayCommand((obj) =>
 					{
-						try
-						{
-							SaveFileDialog dlg = new SaveFileDialog();
-							dlg.Filter = "SoundMap files (*.smx)|*.smx";
-							dlg.FilterIndex = 1;
-							if (dlg.ShowDialog() == DialogResult.OK)
-								XmlHelper.Save(Points.ToArray(), dlg.FileName);
-						}
-						catch (Exception ex)
-						{
-							App.ShowError(ex.Message);
-						}
+						//try
+						//{
+						//	SaveFileDialog dlg = new SaveFileDialog();
+						//	dlg.Filter = "SoundMap files (*.smx)|*.smx";
+						//	dlg.FilterIndex = 1;
+						//	if (dlg.ShowDialog() == DialogResult.OK)
+						//		XmlHelper.Save(Points.ToArray(), dlg.FileName);
+						//}
+						//catch (Exception ex)
+						//{
+						//	App.ShowError(ex.Message);
+						//}
 					});
 				return FSaveCommand;
-			}
-		}
-
-		public RelayCommand ClearCommand
-		{
-			get
-			{
-				if (FClearCommand == null)
-					FClearCommand = new RelayCommand((obj) =>
-					{
-						Points.Clear();
-					});
-				return FClearCommand;
-			}
-		}
-
-		public RelayCommand ExitCommand
-		{
-			get
-			{
-				if (FExitCommand == null)
-					FExitCommand = new RelayCommand((obj) => System.Windows.Application.Current.MainWindow.Close());
-				return FExitCommand;
 			}
 		}
 
@@ -203,6 +210,35 @@ namespace SoundMap
 
 					});
 				return FNewProjectCommand;
+			}
+		}
+
+		public RelayCommand DeviceMenuItemCommand
+		{
+			get
+			{
+				if (FDeviceMenuItemCommand == null)
+					FDeviceMenuItemCommand = new RelayCommand((obj) =>
+					{
+						if (!IsPause)
+							StopPlay();
+						var dmi = obj as DeviceMenuItem;
+						SelectedDeviceId = dmi.Device.ID;
+						NotifyPropertyChanged(nameof(Devices));
+						if (!IsPause)
+							StartPlay();
+					});
+				return FDeviceMenuItemCommand;
+			}
+		}
+
+		public RelayCommand IsPauseCommand
+		{
+			get
+			{
+				if (FIsPauseCommand == null)
+					FIsPauseCommand = new RelayCommand((obj) => IsPause = !IsPause);
+				return FIsPauseCommand;
 			}
 		}
 	}

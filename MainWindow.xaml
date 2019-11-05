@@ -7,12 +7,16 @@
 	xmlns:local="clr-namespace:SoundMap"
 	mc:Ignorable="d"
 	Closed="Window_Closed"
+	Loaded="Window_Loaded"
 	WindowStartupLocation="CenterScreen"
-	Title="SoundMap" Height="450" Width="800">
+	Title="SoundMap"
+	Name="This"
+	Height="450" Width="800">
 	<Window.Background>
 		<SolidColorBrush Color="{DynamicResource {x:Static SystemColors.ControlColorKey}}"/>
 	</Window.Background>
 	<Window.InputBindings>
+		<KeyBinding Key="Pause" Command="{Binding IsPauseCommand}"/>
 		<KeyBinding Key="Esc" Command="{Binding ExitCommand}"/>
 	</Window.InputBindings>
 	<DockPanel>
@@ -25,57 +29,56 @@
 				<Separator />
 				<MenuItem Header="Exit" InputGestureText="Esc" Command="{Binding ExitCommand}" />
 			</MenuItem>
+			<MenuItem Header="Sound">
+				<MenuItem Header="Pause" InputGestureText="Pause" IsCheckable="True" IsChecked="{Binding IsPause}" />
+				<MenuItem Header="Device" ItemsSource="{Binding Devices}">
+					<MenuItem.ItemContainerStyle>
+						<Style TargetType="MenuItem">
+							<Setter Property="Header" Value="{Binding Name}" />
+							<Setter Property="IsCheckable" Value="True" />
+							<Setter Property="IsChecked" Value="{Binding Selected}" />
+							<Setter Property="Command" Value="{Binding ElementName=This, Path=DataContext.DeviceMenuItemCommand}" />
+							<Setter Property="CommandParameter" Value="{Binding}" />
+						</Style>
+					</MenuItem.ItemContainerStyle>
+				</MenuItem>
+			</MenuItem>
 		</Menu>
 		<Grid>
 			<Grid.RowDefinitions>
 				<RowDefinition Height="1*"/>
+				<RowDefinition Height="5"/>
 				<RowDefinition Height="1*"/>
 			</Grid.RowDefinitions>
 			<Grid.ColumnDefinitions>
 				<ColumnDefinition Width="*"/>
-				<ColumnDefinition Width="150"/>
 			</Grid.ColumnDefinitions>
 
-			<DockPanel Margin="5" Grid.Column="1" LastChildFill="False" Grid.RowSpan="2">
-				<ComboBox
-				Margin="0, 0, 0, 5"
-				DockPanel.Dock="Top"
-				ItemsSource="{Binding Devices}"
-				SelectedItem="{Binding SelectedDevice}" />
+			<Grid Grid.Column="0" Grid.Row="0">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="*"/>
+					<ColumnDefinition Width="Auto"/>
+				</Grid.ColumnDefinitions>
 
-				<Button
-				Margin="0, 0, 0, 5"
-				DockPanel.Dock="Top" Content="Start/Stop" Command="{Binding StartStopCommand}" />
+				<local:SoundControl
+					Grid.Column="0" Grid.Row="0"
+					AddPointEvent ="{Binding Project.SoundControlAddPointAction}"
+					DeletePointEvent="{Binding Project.SoundControlDeletePointAction}"
+					SnapsToDevicePixels="True"
+					Points="{Binding Project.Points}" />
 
-				<Button
-				Margin="0, 0, 0, 5"
-				DockPanel.Dock="Top" Content="Save..." Command="{Binding SaveCommand}" />
-
-				<Button
-				Margin="0, 0, 0, 5"
-				DockPanel.Dock="Top" Content="Load..." Command="{Binding LoadCommand}" />
-			</DockPanel>
-
-			<local:SoundControl
-				AddPointEvent ="{Binding SoundControlAddPointAction}"
-				DeletePointEvent="{Binding SoundControlDeletePointAction}"
-				SnapsToDevicePixels="True"
-				Points="{Binding Points}"
-				Margin="5, 5, 0, 5"
-				Grid.Column="0" />
-
-			<ListBox
-			Grid.Row="1"
-			HorizontalAlignment="Left"
-			Margin="5, 0, 5, 5"
-			Width="150"
-			ItemsSource="{Binding Points}" />
-
-			<Button
-			Command="{Binding ClearCommand}"
-			Grid.Row="1"
-			HorizontalAlignment="Left"
-			Content="Clear" Margin="160,0,0,180" Width="82" />
+				<StackPanel Grid.Row="0" Grid.Column="1" Orientation="Vertical">
+					<StackPanel.Resources>
+						<Style TargetType="Button">
+							<Setter Property="Width" Value="32" />
+							<Setter Property="Height" Value="32" />
+							<Setter Property="Margin" Value="5,0,5,5" />
+						</Style>
+					</StackPanel.Resources>
+					<Button Content="B1" />
+					<Button Content="B2" />
+				</StackPanel>
+			</Grid>
 		</Grid>
 	</DockPanel>
 	

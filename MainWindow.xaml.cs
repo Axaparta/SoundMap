@@ -1,5 +1,4 @@
 ﻿using System.Windows;
-using System.Windows.Input;
 
 namespace SoundMap
 {
@@ -13,7 +12,13 @@ namespace SoundMap
 
 		private void Window_Closed(object sender, System.EventArgs e)
 		{
+			App.Settings.MainWindow.ReadFrom(this);
 			((MainWindowModel)DataContext).WindowClose();
+		}
+
+		private void Window_Loaded(object sender, RoutedEventArgs e)
+		{
+			App.Settings.MainWindow.ApplyTo(this);
 		}
 	}
 }

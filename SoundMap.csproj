@@ -57,10 +57,12 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Settings\WindowSettings.cs" />
     <Compile Include="SoundControl.cs" />
-    <Compile Include="SoundGenerator.cs" />
+    <Compile Include="Settings\SoundMapSettings.cs" />
     <Compile Include="SoundPoint.cs" />
     <Compile Include="SoundPointCollection.cs" />
+    <Compile Include="SoundProject.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
