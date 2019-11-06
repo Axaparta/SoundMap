@@ -18,6 +18,9 @@ namespace SoundMap
 		private Point FRelative = new Point(0.5, 0.5);
 		private bool FIsSelected = false;
 
+		private bool FIsSolo = false;
+		private bool FIsMute = false;
+
 		[XmlIgnore]
 		public bool IsSelected
 		{
@@ -66,6 +69,32 @@ namespace SoundMap
 					Frequency = Math.Pow(2, pow);
 
 					NotifyPropertyChanged(() => Relative);
+				}
+			}
+		}
+
+		public bool IsSolo
+		{
+			get => FIsSolo;
+			set
+			{
+				if (FIsSolo != value)
+				{
+					FIsSolo = value;
+					NotifyPropertyChanged(nameof(IsSolo));
+				}
+			}
+		}
+
+		public bool IsMute
+		{
+			get => FIsMute;
+			set
+			{
+				if (FIsMute != value)
+				{
+					FIsMute = value;
+					NotifyPropertyChanged(nameof(IsMute));
 				}
 			}
 		}

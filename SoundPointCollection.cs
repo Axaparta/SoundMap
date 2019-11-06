@@ -1,7 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Collections.Specialized;
 using System.ComponentModel;
 
 namespace SoundMap
@@ -10,6 +8,8 @@ namespace SoundMap
 	{
 		private int FChangedLock = 0;
 		private bool FChangedNeed = false;
+
+		public event PropertyChangedEventHandler PointPropertyChanged;
 
 		public SoundPointCollection()
 		{
@@ -23,16 +23,29 @@ namespace SoundMap
 		{
 		}
 
-		public void AddSoundPoint(SoundPoint APoint)
+		protected override void ClearItems()
 		{
-			APoint.PropertyChanged += Point_PropertyChanged;
-			Add(APoint);
+			foreach (var p in this)
+				p.PropertyChanged -= Point_PropertyChanged;
+			base.ClearItems();
 		}
 
-		public void RemoveSoundPoint(SoundPoint APoint)
+		protected override void InsertItem(int index, SoundPoint item)
 		{
-			APoint.PropertyChanged -= Point_PropertyChanged;
-			Remove(APoint);
+			item.PropertyChanged += Point_PropertyChanged;
+			base.InsertItem(index, item);
+		}
+
+		protected override void SetItem(int index, SoundPoint item)
+		{
+			item.PropertyChanged += Point_PropertyChanged;
+			base.SetItem(index, item);
+		}
+
+		protected override void RemoveItem(int index)
+		{
+			this[index].PropertyChanged -= Point_PropertyChanged;
+			base.RemoveItem(index);
 		}
 
 		private void Point_PropertyChanged(object sender, PropertyChangedEventArgs e)
@@ -40,7 +53,7 @@ namespace SoundMap
 			if (FChangedLock > 0)
 				FChangedNeed = true;
 			else
-				RaiseChanged();
+				RaiseChanged(sender, e);
 		}
 
 		public void ChangedLock()
@@ -54,13 +67,13 @@ namespace SoundMap
 		{
 			FChangedLock--;
 			if (FChangedLock == 0)
-				if ((ARaiseChangedIfNeed) && (FChangedNeed))
-					RaiseChanged();
+				if (ARaiseChangedIfNeed && FChangedNeed)
+					RaiseChanged(null, null);
 		}
 
-		private void RaiseChanged()
+		private void RaiseChanged(object sender, PropertyChangedEventArgs e)
 		{
-			OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+			PointPropertyChanged?.Invoke(sender, e);
 		}
 	}
 }

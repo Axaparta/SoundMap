@@ -1,6 +1,9 @@
 ﻿using NAudio.Wave;
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -21,15 +24,20 @@ namespace SoundMap
 		public SoundPointCollection Points { get; } = new SoundPointCollection();
 
 		[XmlIgnore]
+		public SoundPointCollection SelectedPoints { get; } = new SoundPointCollection();
+
+		[XmlIgnore]
 		public string FileName { get; set; }
 
 		private Action<SoundPoint> FSoundControlAddPointAction = null;
 		private Action<SoundPoint> FSoundControlDeletePointAction = null;
-
+		private SoundPoint FSelectedPoint = null;
 
 		public SoundProject()
 		{
 			Points.CollectionChanged += Points_CollectionChanged;
+			Points.PointPropertyChanged += Points_PointPropertyChanged;
+			SelectedPoints.CollectionChanged += SelectedPoints_CollectionChanged;
 		}
 
 		public static SoundProject CreateFromFile(string AFileName)
@@ -45,15 +53,62 @@ namespace SoundMap
 			get => Points.ToArray();
 			set
 			{
+				Points.ChangedLock();
 				Points.Clear();
-				foreach (var p in value)
-					Points.Add(p);
+				if (value != null)
+					foreach (var p in value)
+						Points.Add(p);
+				Points.ChangedUnlock();
 			}
 		}
 
-		private void Points_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+		private void Points_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
 		{
-			//SetPoints(Points);
+
+		}
+
+		private void Points_PointPropertyChanged(object sender, PropertyChangedEventArgs e)
+		{
+			if ((sender != null) && (e != null))
+			{
+				var sp = (SoundPoint)sender;
+				// Устанавливается соло, но оно может быть только одно!
+				if ((e.PropertyName == nameof(SoundPoint.IsSolo)) && sp.IsSolo)
+				{
+					Points.ChangedLock();
+					foreach (var p in Points)
+						p.IsSolo = p == sp;
+					Points.ChangedUnlock();
+				}
+			}
+
+			SelectedPoints.ChangedLock();
+			SelectedPoints.Clear();
+			foreach (var p in Points)
+				if (p.IsSelected)
+					SelectedPoints.Add(p);
+			SelectedPoints.ChangedUnlock();
+		}
+
+		private void SelectedPoints_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+		{
+			if (SelectedPoints.Count == 1)
+				SelectedPoint = SelectedPoints.First();
+			else
+				SelectedPoint = null;
+		}
+
+		public SoundPoint SelectedPoint
+		{
+			get => FSelectedPoint;
+			set
+			{
+				if (FSelectedPoint != value)
+				{
+					FSelectedPoint = value;
+					NotifyPropertyChanged(nameof(SelectedPoint));
+				}
+			}
 		}
 
 		public void ConfigureGenerator(int ASampleRate, int AChannels)
@@ -71,7 +126,6 @@ namespace SoundMap
 				return $"{App.AppName} [{Path.GetFileNameWithoutExtension(FileName)}]";
 			}
 		}
-
 
 		public int Read(float[] buffer, int offset, int count)
 		{
@@ -111,8 +165,16 @@ namespace SoundMap
 			double r = 0;
 			foreach (var p in APoints)
 			{
+				if (p.IsMute)
+					continue;
+
 				max += p.Volume;
-				r += p.Volume * Math.Sin(p.Frequency * ATime * Math.PI * 2);
+				var v = p.Volume * Math.Sin(p.Frequency * ATime * Math.PI * 2);
+
+				if (p.IsSolo)
+					return v;
+
+				r += v;
 			}
 
 			if (max > 1)
@@ -126,7 +188,7 @@ namespace SoundMap
 			get
 			{
 				if (FSoundControlAddPointAction == null)
-					FSoundControlAddPointAction = new Action<SoundPoint>((sp) => Points.AddSoundPoint(sp));
+					FSoundControlAddPointAction = new Action<SoundPoint>((sp) => Points.Add(sp));
 				return FSoundControlAddPointAction;
 			}
 		}
@@ -136,7 +198,7 @@ namespace SoundMap
 			get
 			{
 				if (FSoundControlDeletePointAction == null)
-					FSoundControlDeletePointAction = new Action<SoundPoint>((sp) => Points.RemoveSoundPoint(sp));
+					FSoundControlDeletePointAction = new Action<SoundPoint>((sp) => Points.Remove(sp));
 				return FSoundControlDeletePointAction;
 			}
 		}

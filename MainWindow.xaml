@@ -5,6 +5,7 @@
 	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 	xmlns:local="clr-namespace:SoundMap"
+	xmlns:localControls="clr-namespace:SoundMap.Controls"
 	mc:Ignorable="d"
 	Closed="Window_Closed"
 	Loaded="Window_Loaded"
@@ -64,12 +65,13 @@
 					<ColumnDefinition Width="Auto"/>
 				</Grid.ColumnDefinitions>
 
-				<local:SoundControl
+				<localControls:SoundControl
 					Grid.Column="0" Grid.Row="0"
 					AddPointEvent ="{Binding Project.SoundControlAddPointAction}"
 					DeletePointEvent="{Binding Project.SoundControlDeletePointAction}"
 					SnapsToDevicePixels="True"
-					Points="{Binding Project.Points}" />
+					Points="{Binding Project.Points}"
+					SelectedPoints="{Binding Project.SelectedPoints}" />
 
 				<StackPanel Grid.Row="0" Grid.Column="1" Orientation="Vertical">
 					<StackPanel.Resources>
@@ -83,6 +85,12 @@
 					<Button Content="B2" />
 				</StackPanel>
 			</Grid>
+
+			<localControls:SoundPointControl
+				Point="{Binding Project.SelectedPoint}"
+				HorizontalAlignment="Left"
+				Grid.Row="2"
+				Width="200" />
 		</Grid>
 	</DockPanel>
 	
