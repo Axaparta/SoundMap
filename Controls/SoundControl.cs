@@ -404,32 +404,40 @@ namespace SoundMap.Controls
 				case Key.Left:
 					Points.ChangedLock();
 					foreach (var p in SelectedPoints)
-						if (p.IsSelected)
-							p.Relative = new Point(p.Relative.X - 1 / ActualWidth, p.Relative.Y);
+						p.Relative = new Point(p.Relative.X - 1 / ActualWidth, p.Relative.Y);
 					Points.ChangedUnlock();
 					e.Handled = true;
 					break;
 				case Key.Right:
 					Points.ChangedLock();
 					foreach (var p in SelectedPoints)
-						if (p.IsSelected)
-							p.Relative = new Point(p.Relative.X + 1 / ActualWidth, p.Relative.Y);
+						p.Relative = new Point(p.Relative.X + 1 / ActualWidth, p.Relative.Y);
 					Points.ChangedUnlock();
 					e.Handled = true;
 					break;
 				case Key.Up:
 					Points.ChangedLock();
 					foreach (var p in SelectedPoints)
-						if (p.IsSelected)
-							p.Relative = new Point(p.Relative.X, p.Relative.Y - 1 / ActualHeight);
+						p.Relative = new Point(p.Relative.X, p.Relative.Y - 1 / ActualHeight);
 					Points.ChangedUnlock();
 					e.Handled = true;
 					break;
 				case Key.Down:
 					Points.ChangedLock();
 					foreach (var p in SelectedPoints)
-						if (p.IsSelected)
-							p.Relative = new Point(p.Relative.X, p.Relative.Y + 1 / ActualHeight);
+						p.Relative = new Point(p.Relative.X, p.Relative.Y + 1 / ActualHeight);
+					Points.ChangedUnlock();
+					e.Handled = true;
+					break;
+				case Key.S:
+					if (SelectedPoints.Count == 1)
+						SelectedPoints[0].IsSolo = !SelectedPoints[0].IsSolo;
+					e.Handled = true;
+					break;
+				case Key.M:
+					Points.ChangedLock();
+					foreach (var p in SelectedPoints)
+						p.IsMute = !p.IsMute;
 					Points.ChangedUnlock();
 					e.Handled = true;
 					break;

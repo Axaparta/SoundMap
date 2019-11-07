@@ -29,6 +29,9 @@ namespace SoundMap
 		[XmlIgnore]
 		public string FileName { get; set; }
 
+		[XmlIgnore]
+		public PointKind NewPointKind { get; set; } = PointKind.Static;
+
 		private Action<SoundPoint> FSoundControlAddPointAction = null;
 		private Action<SoundPoint> FSoundControlDeletePointAction = null;
 		private SoundPoint FSelectedPoint = null;
@@ -169,7 +172,7 @@ namespace SoundMap
 					continue;
 
 				max += p.Volume;
-				var v = p.Volume * Math.Sin(p.Frequency * ATime * Math.PI * 2);
+				var v = p.Volume * p.GetValue(ATime);
 
 				if (p.IsSolo)
 					return v;
@@ -188,7 +191,11 @@ namespace SoundMap
 			get
 			{
 				if (FSoundControlAddPointAction == null)
-					FSoundControlAddPointAction = new Action<SoundPoint>((sp) => Points.Add(sp));
+					FSoundControlAddPointAction = new Action<SoundPoint>((sp) =>
+					{
+						sp.Kind = NewPointKind;
+						Points.Add(sp);
+					});
 				return FSoundControlAddPointAction;
 			}
 		}

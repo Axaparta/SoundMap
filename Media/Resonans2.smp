@@ -1,0 +1,21 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<SoundProject xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<Points>
+		<Relative>
+			<X>0.54160892126212645</X>
+			<Y>0.724246343990978</Y>
+		</Relative>
+		<Kind>Static</Kind>
+		<IsSolo>false</IsSolo>
+		<IsMute>false</IsMute>
+	</Points>
+	<Points>
+		<Relative>
+			<X>0.56215554194733619</X>
+			<Y>0.693552381738628</Y>
+		</Relative>
+		<Kind>Static</Kind>
+		<IsSolo>false</IsSolo>
+		<IsMute>true</IsMute>
+	</Points>
+</SoundProject>

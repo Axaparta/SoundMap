@@ -1,6 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Threading.Tasks;
 
 namespace SoundMap
 {
@@ -26,26 +28,46 @@ namespace SoundMap
 		protected override void ClearItems()
 		{
 			foreach (var p in this)
-				p.PropertyChanged -= Point_PropertyChanged;
+				ExcludePoint(p);
 			base.ClearItems();
 		}
 
 		protected override void InsertItem(int index, SoundPoint item)
 		{
-			item.PropertyChanged += Point_PropertyChanged;
+			IncludePoint(item);
 			base.InsertItem(index, item);
 		}
 
 		protected override void SetItem(int index, SoundPoint item)
 		{
-			item.PropertyChanged += Point_PropertyChanged;
+			IncludePoint(item);
 			base.SetItem(index, item);
 		}
 
 		protected override void RemoveItem(int index)
 		{
-			this[index].PropertyChanged -= Point_PropertyChanged;
+			ExcludePoint(this[index]);
 			base.RemoveItem(index);
+		}
+
+		private void IncludePoint(SoundPoint APoint)
+		{
+			APoint.PropertyChanged += Point_PropertyChanged;
+			APoint.RemoveSelf += Point_RemoveSelf;
+		}
+
+		private void Point_RemoveSelf(SoundPoint obj)
+		{
+			Task.Factory.StartNew(() =>
+			{
+				App.Current.Dispatcher.Invoke(new Action(() => Remove(obj)));
+			});
+		}
+
+		private void ExcludePoint(SoundPoint APoint)
+		{
+			APoint.PropertyChanged -= Point_PropertyChanged;
+			APoint.RemoveSelf -= Point_RemoveSelf;
 		}
 
 		private void Point_PropertyChanged(object sender, PropertyChangedEventArgs e)

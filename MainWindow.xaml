@@ -24,7 +24,7 @@
 		<KeyBinding Key="S" Modifiers="Ctrl" Command="{Binding SaveProjectCommand}" />
 		<KeyBinding Key="O" Modifiers="Ctrl" Command="{Binding OpenProjectCommand}" />
 	</Window.InputBindings>
-	<DockPanel>
+	<DockPanel Margin="5,0,5,5">
 		<Menu DockPanel.Dock="Top">
 			<MenuItem Header="File">
 				<MenuItem Header="New project" InputGestureText="Ctrl+N" Command="{Binding NewProjectCommand}" />
@@ -78,11 +78,11 @@
 						<Style TargetType="Button">
 							<Setter Property="Width" Value="32" />
 							<Setter Property="Height" Value="32" />
-							<Setter Property="Margin" Value="5,0,5,5" />
+							<Setter Property="Margin" Value="5,0,0,5" />
 						</Style>
 					</StackPanel.Resources>
-					<Button Content="B1" />
-					<Button Content="B2" />
+					<Button Content="Bell" Command="{Binding SetNewPointKindCommand}" CommandParameter="B" />
+					<Button Content="Stat" Command="{Binding SetNewPointKindCommand}" CommandParameter="S" />
 				</StackPanel>
 			</Grid>
 

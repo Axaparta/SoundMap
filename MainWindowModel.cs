@@ -37,6 +37,7 @@ namespace SoundMap
 		private RelayCommand FNewProjectCommand = null;
 		private RelayCommand FDeviceMenuItemCommand = null;
 		private RelayCommand FIsPauseCommand = null;
+		private RelayCommand FSetNewPointKindCommand = null;
 
 		private SoundProject FProject = new SoundProject();
 		private bool FIsPause = false;
@@ -259,6 +260,22 @@ namespace SoundMap
 				if (FIsPauseCommand == null)
 					FIsPauseCommand = new RelayCommand((obj) => IsPause = !IsPause);
 				return FIsPauseCommand;
+			}
+		}
+
+		public RelayCommand SetNewPointKindCommand
+		{
+			get
+			{
+				if (FSetNewPointKindCommand == null)
+					FSetNewPointKindCommand = new RelayCommand((obj) =>
+					{
+						if (obj as string == "B")
+							Project.NewPointKind = PointKind.Bell;
+						if (obj as string == "S")
+							Project.NewPointKind = PointKind.Static;
+					});
+				return FSetNewPointKindCommand;
 			}
 		}
 	}

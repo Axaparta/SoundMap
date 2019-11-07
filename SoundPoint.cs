@@ -20,6 +20,10 @@ namespace SoundMap
 
 		private bool FIsSolo = false;
 		private bool FIsMute = false;
+		private PointKind FKind = PointKind.Static;
+		private double FStartTime = double.NaN;
+
+		public event Action<SoundPoint> RemoveSelf;
 
 		[XmlIgnore]
 		public bool IsSelected
@@ -69,6 +73,19 @@ namespace SoundMap
 					Frequency = Math.Pow(2, pow);
 
 					NotifyPropertyChanged(() => Relative);
+				}
+			}
+		}
+
+		public PointKind Kind
+		{
+			get => FKind;
+			set
+			{
+				if (FKind != value)
+				{
+					FKind = value;
+					NotifyPropertyChanged(nameof(Kind));
 				}
 			}
 		}
@@ -123,6 +140,33 @@ namespace SoundMap
 		public override string ToString()
 		{
 			return Frequency.ToString("F2");
+		}
+
+		public double GetValue(double ATime)
+		{
+			switch (Kind)
+			{
+				case PointKind.Static:
+					return Math.Sin(Frequency * ATime * Math.PI * 2);
+				case PointKind.Bell:
+					if (double.IsNaN(FStartTime))
+						FStartTime = ATime;
+
+					var d = ATime - FStartTime;
+					d = 1 / (1 + d*d);
+
+					if (d < 0.1)
+						DoRemoveSelf();
+
+					return  d*Math.Sin(Frequency * ATime * Math.PI * 2);
+				default:
+					throw new NotImplementedException();
+			}
+		}
+
+		private void DoRemoveSelf()
+		{
+			RemoveSelf?.Invoke(this);
 		}
 	}
 }
