@@ -31,6 +31,7 @@
 				<MenuItem Header="Open project..." InputGestureText="Ctrl+O" Command="{Binding OpenProjectCommand}" />
 				<MenuItem Header="Save project" InputGestureText="Ctrl+S" Command="{Binding SaveProjectCommand}" />
 				<MenuItem Header="Save project as..." Command="{Binding SaveProjectAsCommand}" />
+				<MenuItem Header="Save sample as..." Command="{Binding SaveSampleCommand}" />
 				<Separator />
 				<MenuItem Header="Exit" InputGestureText="Esc" Command="{Binding ExitCommand}" />
 			</MenuItem>

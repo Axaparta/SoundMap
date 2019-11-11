@@ -38,6 +38,7 @@ namespace SoundMap
 		private RelayCommand FDeviceMenuItemCommand = null;
 		private RelayCommand FIsPauseCommand = null;
 		private RelayCommand FSetNewPointKindCommand = null;
+		private RelayCommand FSaveSampleCommand = null;
 
 		private SoundProject FProject = new SoundProject();
 		private bool FIsPause = false;
@@ -276,6 +277,38 @@ namespace SoundMap
 							Project.NewPointKind = PointKind.Static;
 					});
 				return FSetNewPointKindCommand;
+			}
+		}
+
+		public RelayCommand SaveSampleCommand
+		{
+			get
+			{
+				if (FSaveSampleCommand == null)
+					FSaveSampleCommand = new RelayCommand((obj) =>
+					{
+						using (SaveFileDialog dlg = new SaveFileDialog())
+						{
+							if (!string.IsNullOrEmpty(Project.FileName))
+							{
+								dlg.InitialDirectory = Path.GetFullPath(Project.FileName);
+								dlg.FileName = Path.GetFileName(Project.FileName);
+							}
+							dlg.Filter = "Wave file (*.wav)|*.wav";
+							dlg.FilterIndex = 1;
+							if (dlg.ShowDialog() == DialogResult.OK)
+							{
+								if (!IsPause)
+									StopPlay();
+
+								Project.SaveSampleToFile(dlg.FileName);
+
+								if (!IsPause)
+									StartPlay();
+							}
+						}
+					});
+				return FSaveSampleCommand;
 			}
 		}
 	}

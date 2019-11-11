@@ -223,5 +223,24 @@ namespace SoundMap
 				App.ShowError(ex.Message);
 			}
 		}
+
+		public void SaveSampleToFile(string AFileName)
+		{
+
+			try
+			{
+				using (WaveFileWriter writer = new WaveFileWriter(AFileName, WaveFormat))
+				{
+					float[] buf = new float[WaveFormat.AverageBytesPerSecond];
+					int offset = 0;
+					var rb = Read(buf, offset, buf.Length);
+					writer.WriteSamples(buf, offset, rb);
+				}
+			}
+			catch (Exception ex)
+			{
+				App.ShowError(ex.Message);
+			}
+		}
 	}
 }

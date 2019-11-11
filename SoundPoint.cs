@@ -9,8 +9,8 @@ namespace SoundMap
 	public class SoundPoint : Observable, ICloneable
 	{
 		// Желаемый диапазон частот
-		private const double FMin = 80;
-		private const double FMax = 2000;
+		private const double FMin = 200;
+		private const double FMax = 1000;
 		// Горизонтальная шкала - степень двойки (степень линейна). Далее максимальные и минимальные значения этой шкалы
 		private readonly double LogFMin = Math.Log(FMin, 2);
 		private readonly double LogFMax = Math.Log(FMax, 2);
