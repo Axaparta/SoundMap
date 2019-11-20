@@ -271,10 +271,7 @@ namespace SoundMap
 				if (FSetNewPointKindCommand == null)
 					FSetNewPointKindCommand = new RelayCommand((obj) =>
 					{
-						if (obj as string == "B")
-							Project.NewPointKind = PointKind.Bell;
-						if (obj as string == "S")
-							Project.NewPointKind = PointKind.Static;
+						Project.NewPointKind = (PointKind)obj;
 					});
 				return FSetNewPointKindCommand;
 			}

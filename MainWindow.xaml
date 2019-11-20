@@ -82,8 +82,21 @@
 							<Setter Property="Margin" Value="5,0,0,5" />
 						</Style>
 					</StackPanel.Resources>
-					<Button Content="Bell" Command="{Binding SetNewPointKindCommand}" CommandParameter="B" />
-					<Button Content="Stat" Command="{Binding SetNewPointKindCommand}" CommandParameter="S" />
+					<Button Content="Stat" Command="{Binding SetNewPointKindCommand}">
+						<Button.CommandParameter>
+							<local:PointKind>Static</local:PointKind>
+						</Button.CommandParameter>
+					</Button>
+					<Button Content="Bell" Command="{Binding SetNewPointKindCommand}">
+						<Button.CommandParameter>
+							<local:PointKind>Bell</local:PointKind>
+						</Button.CommandParameter>
+					</Button>
+					<Button Content="Saw" Command="{Binding SetNewPointKindCommand}">
+						<Button.CommandParameter>
+							<local:PointKind>Saw</local:PointKind>
+						</Button.CommandParameter>
+					</Button>
 				</StackPanel>
 			</Grid>
 

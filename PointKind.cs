@@ -3,6 +3,7 @@
 	public enum PointKind
 	{
 		Static,
-		Bell
+		Bell,
+		Saw
 	}
 }
