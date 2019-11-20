@@ -29,6 +29,11 @@ namespace SoundMap
 		[XmlIgnore]
 		public string FileName { get; set; }
 
+		public double MinFrequency { get; set; } = 50;
+		public double MaxFrequwency { get; set; } = 2000;
+
+		Подумать как передавать эти числа точке
+
 		[XmlIgnore]
 		public PointKind NewPointKind { get; set; } = PointKind.Static;
 

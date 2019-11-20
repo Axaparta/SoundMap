@@ -172,7 +172,7 @@ namespace SoundMap
 					if (rem < f4 * 3)
 					{
 						rem -= f4;
-						return 1 - 2 * rem / f4;
+						return 1 - rem / f4;
 					}
 					rem -= f4 * 3;
 					return -1 + rem / f4;

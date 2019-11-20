@@ -2,8 +2,20 @@
 <SoundProject xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 	<Points>
 		<Relative>
-			<X>0.4625</X>
+			<X>0.46730512546716518</X>
 			<Y>0.69355487069543087</Y>
 		</Relative>
+		<Kind>Static</Kind>
+		<IsSolo>false</IsSolo>
+		<IsMute>false</IsMute>
 	</Points>
+	<SelectedPoint>
+		<Relative>
+			<X>0.46730512546716518</X>
+			<Y>0.69355487069543087</Y>
+		</Relative>
+		<Kind>Static</Kind>
+		<IsSolo>false</IsSolo>
+		<IsMute>false</IsMute>
+	</SelectedPoint>
 </SoundProject>

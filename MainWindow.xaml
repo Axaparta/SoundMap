@@ -97,14 +97,22 @@
 							<local:PointKind>Saw</local:PointKind>
 						</Button.CommandParameter>
 					</Button>
+					
 				</StackPanel>
 			</Grid>
 
-			<localControls:SoundPointControl
-				Point="{Binding Project.SelectedPoint}"
-				HorizontalAlignment="Left"
-				Grid.Row="2"
-				Width="200" />
+			<DockPanel Grid.Row="2">
+				<localControls:SoundPointControl
+					Point="{Binding Project.SelectedPoint}"
+					DockPanel.Dock="Left"
+					Width="110" />
+				<StackPanel DockPanel.Dock="Left" Width="50" HorizontalAlignment="Left">
+					<TextBlock Text="MaxF" />
+					<TextBox />
+					<TextBlock Text="MinF" />
+					<TextBox />
+				</StackPanel>
+			</DockPanel>
 		</Grid>
 	</DockPanel>
 	
