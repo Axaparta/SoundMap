@@ -105,12 +105,12 @@
 				<localControls:SoundPointControl
 					Point="{Binding Project.SelectedPoint}"
 					DockPanel.Dock="Left"
-					Width="110" />
+					Width="120" />
 				<StackPanel DockPanel.Dock="Left" Width="50" HorizontalAlignment="Left">
 					<TextBlock Text="MaxF" />
-					<TextBox />
+					<TextBox Text="{Binding Project.MaxFrequency, Mode=TwoWay}" KeyDown="TextBox_KeyDown" />
 					<TextBlock Text="MinF" />
-					<TextBox />
+					<TextBox Text="{Binding Project.MinFrequency, Mode=TwoWay}" KeyDown="TextBox_KeyDown" />
 				</StackPanel>
 			</DockPanel>
 		</Grid>

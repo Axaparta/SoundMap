@@ -1,12 +1,9 @@
 ﻿using NAudio.Wave;
 using System;
-using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Xml.Serialization;
 
 namespace SoundMap
@@ -19,6 +16,8 @@ namespace SoundMap
 		[XmlIgnore]
 		public WaveFormat WaveFormat { get; private set; }
 		private double FTime = 0;
+		private double FMinFrequency = 50;
+		private double FMaxFrequency = 2000;
 
 		[XmlIgnore]
 		public SoundPointCollection Points { get; } = new SoundPointCollection();
@@ -29,8 +28,30 @@ namespace SoundMap
 		[XmlIgnore]
 		public string FileName { get; set; }
 
-		public double MinFrequency { get; set; } = 50;
-		public double MaxFrequwency { get; set; } = 2000;
+		public double MinFrequency
+		{
+			get => FMinFrequency;
+			set
+			{
+				if (FMinFrequency != value)
+				{
+					FMinFrequency = value;
+					Points_PointPropertyChanged(null, null);
+				}
+			}
+		}
+		public double MaxFrequency
+		{
+			get => FMaxFrequency;
+			set
+			{
+				if (FMaxFrequency != value)
+				{
+					FMaxFrequency = value;
+					Points_PointPropertyChanged(null, null);
+				}
+			}
+		}
 
 		//Подумать как передавать эти числа точке
 

@@ -1,4 +1,6 @@
 ﻿using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
 
 namespace SoundMap
 {
@@ -19,6 +21,12 @@ namespace SoundMap
 		private void Window_Loaded(object sender, RoutedEventArgs e)
 		{
 			App.Settings.MainWindow.ApplyTo(this);
+		}
+
+		private void TextBox_KeyDown(object sender, KeyEventArgs e)
+		{
+			if (e.Key == Key.Return)
+				(sender as TextBox).GetBindingExpression(TextBox.TextProperty).UpdateSource();
 		}
 	}
 }
