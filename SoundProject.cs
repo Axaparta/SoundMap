@@ -4,6 +4,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Windows;
 using System.Xml.Serialization;
 
 namespace SoundMap
@@ -13,11 +14,14 @@ namespace SoundMap
 	{
 		public static readonly string FileFilter = "SoundMap project (*.smp)|*.smp";
 
-		[XmlIgnore]
-		public WaveFormat WaveFormat { get; private set; }
+		private double FLogFMin = 1;
+		private double FLogFMax = 1;
 		private double FTime = 0;
 		private double FMinFrequency = 50;
 		private double FMaxFrequency = 2000;
+
+		[XmlIgnore]
+		public WaveFormat WaveFormat { get; private set; }
 
 		[XmlIgnore]
 		public SoundPointCollection Points { get; } = new SoundPointCollection();
@@ -36,6 +40,7 @@ namespace SoundMap
 				if (FMinFrequency != value)
 				{
 					FMinFrequency = value;
+					FLogFMin = Math.Log(FMinFrequency, 2);
 					Points_PointPropertyChanged(null, null);
 				}
 			}
@@ -48,6 +53,7 @@ namespace SoundMap
 				if (FMaxFrequency != value)
 				{
 					FMaxFrequency = value;
+					FLogFMax = Math.Log(FMaxFrequency, 2);
 					Points_PointPropertyChanged(null, null);
 				}
 			}
@@ -267,6 +273,15 @@ namespace SoundMap
 			{
 				App.ShowError(ex.Message);
 			}
+		}
+
+		public Point GetPointXY(SoundPoint APoint, double AActualWidth, double AActualHeight)
+		{
+			//var pow = LogFMin + (LogFMax - LogFMin) * FRelative.X;
+			//Frequency = Math.Pow(2, pow);
+			double pow = Math.Log(APoint.Frequency, 2);
+			double rx = (pow - FLogFMin) / (FLogFMax - FLogFMin);
+			return new Point(AActualWidth * rx, AActualHeight * APoint.Volume);
 		}
 	}
 }

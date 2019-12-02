@@ -72,6 +72,7 @@
 					DeletePointEvent="{Binding Project.SoundControlDeletePointAction}"
 					SnapsToDevicePixels="True"
 					Points="{Binding Project.Points}"
+					Project="{Binding Project}"
 					SelectedPoints="{Binding Project.SelectedPoints}" />
 
 				<StackPanel Grid.Row="0" Grid.Column="1" Orientation="Vertical">

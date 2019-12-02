@@ -108,6 +108,16 @@ namespace SoundMap.Controls
 
 		#region Properties
 
+		public static readonly DependencyProperty ProjectProperty = DependencyProperty.Register(
+			"Project", typeof(SoundProject), typeof(SoundControl),
+			new FrameworkPropertyMetadata());
+
+		public SoundProject Project
+		{
+			get => (SoundProject)GetValue(ProjectProperty);
+			set => SetValue(ProjectProperty, value);
+		}
+
 		public static readonly DependencyProperty PointsProperty = DependencyProperty.Register(
 			"Points", typeof(SoundPointCollection), typeof(SoundControl),
 			new FrameworkPropertyMetadata(new SoundPointCollection(), PointsCollectionChanged));
@@ -160,9 +170,9 @@ namespace SoundMap.Controls
 		public static readonly DependencyProperty AddPointEventProperty = DependencyProperty.Register(
 			"AddPointEvent", typeof(Action<SoundPoint>), typeof(SoundControl));
 
-		public Action<SoundPoint> AddPointEvent
+		public Action<Point> AddPointEvent
 		{
-			get => (Action<SoundPoint>)GetValue(AddPointEventProperty);
+			get => (Action<Point>)GetValue(AddPointEventProperty);
 			set => SetValue(AddPointEventProperty, value);
 		}
 
@@ -190,10 +200,10 @@ namespace SoundMap.Controls
 
 			FRenderPoints.Clear();
 
-			if (Points != null)
+			if ((Points != null) && (Project != null))
 				foreach (var p in Points)
 				{
-					var c = new Point((int)(p.Relative.X * ActualWidth), (int)(p.Relative.Y * ActualHeight));
+					var c = Project.GetPointXY(p, ActualWidth, ActualHeight);
 
 					if ((p.IsSelected) && (FHVControl != HVStatus.Off))
 					{
@@ -247,8 +257,7 @@ namespace SoundMap.Controls
 
 				if (AddPointEvent != null)
 				{
-					var newPoint = new SoundPoint(p.X / ActualWidth, p.Y / ActualHeight);
-					AddPointEvent.Invoke(newPoint);
+					AddPointEvent.Invoke(p.X / ActualWidth, p.Y / ActualHeight);
 					foreach (var pts in Points)
 						pts.IsSelected = pts == newPoint;
 				}
