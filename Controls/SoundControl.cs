@@ -168,20 +168,20 @@ namespace SoundMap.Controls
 		}
 
 		public static readonly DependencyProperty AddPointEventProperty = DependencyProperty.Register(
-			"AddPointEvent", typeof(Action<SoundPoint>), typeof(SoundControl));
+			"AddPointEvent", typeof(SoundPointEvent), typeof(SoundControl));
 
-		public Action<Point> AddPointEvent
+		public Action<SoundPoint> AddPointEvent
 		{
-			get => (Action<Point>)GetValue(AddPointEventProperty);
+			get => (Action<SoundPoint>)GetValue(AddPointEventProperty);
 			set => SetValue(AddPointEventProperty, value);
 		}
 
 		public static readonly DependencyProperty DeletePointEventProperty = DependencyProperty.Register(
-			"DeletePointEvent", typeof(Action<SoundPoint>), typeof(SoundControl));
+			"DeletePointEvent", typeof(SoundPointEvent), typeof(SoundControl));
 
-		public Action<SoundPoint> DeletePointEvent
+		public SoundPointEvent DeletePointEvent
 		{
-			get => (Action<SoundPoint>)GetValue(DeletePointEventProperty);
+			get => (SoundPointEvent)GetValue(DeletePointEventProperty);
 			set => SetValue(DeletePointEventProperty, value);
 		}
 
@@ -203,7 +203,7 @@ namespace SoundMap.Controls
 			if ((Points != null) && (Project != null))
 				foreach (var p in Points)
 				{
-					var c = Project.GetPointXY(p, ActualWidth, ActualHeight);
+					var c = GetPointXY(p);
 
 					if ((p.IsSelected) && (FHVControl != HVStatus.Off))
 					{
@@ -257,7 +257,7 @@ namespace SoundMap.Controls
 
 				if (AddPointEvent != null)
 				{
-					AddPointEvent.Invoke(p.X / ActualWidth, p.Y / ActualHeight);
+					AddPointEvent.Invoke(CreateSoundPointFromXY(p));
 					foreach (var pts in Points)
 						pts.IsSelected = pts == newPoint;
 				}
@@ -464,6 +464,32 @@ namespace SoundMap.Controls
 			}
 
 			base.OnKeyUp(e);
+		}
+
+		public Point GetPointXY(SoundPoint APoint)
+		{
+			double FLogFMin = Math.Log(Project.MinFrequency, 2);
+			double FLogFMax = Math.Log(Project.MaxFrequency, 2);
+			double pow = Math.Log(APoint.Frequency, 2);
+			double rx = (pow - FLogFMin) / (FLogFMax - FLogFMin);
+
+			var p = new Point(ActualWidth * rx, ActualHeight * APoint.Volume);
+
+			if (p.X < 0)
+				p.X = 0;
+			if (p.Y < 0)
+				p.Y = 0;
+			if (p.X > ActualWidth)
+				p.X = ActualWidth;
+			if (p.Y > ActualHeight)
+				p.Y = ActualHeight;
+
+			return p;
+		}
+
+		public SoundPoint CreateSoundPointFromXY(Point APoint)
+		{
+
 		}
 	}
 }

@@ -5,6 +5,8 @@ using System.Xml.Serialization;
 
 namespace SoundMap
 {
+	public delegate void SoundPointEvent(SoundPoint APoint);
+
 	[Serializable]
 	public class SoundPoint : Observable
 	{
