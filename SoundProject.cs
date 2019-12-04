@@ -224,21 +224,23 @@ namespace SoundMap
 					FSoundControlAddPointAction = new SoundPointEvent((sp) =>
 					{
 						sp.Kind = NewPointKind;
-						Points.Add(sp);
+						AddPoint(sp);
 					});
 				return FSoundControlAddPointAction;
 			}
 		}
 
-		public SoundPointEvent SoundControlDeletePointAction
-		{
-			get
-			{
-				if (FSoundControlDeletePointAction == null)
-					FSoundControlDeletePointAction = new SoundPointEvent((sp) => Points.Remove(sp));
-				return FSoundControlDeletePointAction;
-			}
-		}
+		//public void AddPoint(SoundPoint APoint)
+		//{
+		//	Points.Add(sp);
+		//}
+
+
+
+		//public void DeletePoint(SoundPoint APoint)
+		//{
+		//	Points.Remove(APoint);
+		//}
 
 		public void SaveToFile(string AFileName)
 		{

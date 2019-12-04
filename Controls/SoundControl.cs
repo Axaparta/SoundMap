@@ -110,7 +110,7 @@ namespace SoundMap.Controls
 
 		public static readonly DependencyProperty ProjectProperty = DependencyProperty.Register(
 			"Project", typeof(SoundProject), typeof(SoundControl),
-			new FrameworkPropertyMetadata());
+			new FrameworkPropertyMetadata(ProjectPropertyChanged));
 
 		public SoundProject Project
 		{
@@ -118,72 +118,37 @@ namespace SoundMap.Controls
 			set => SetValue(ProjectProperty, value);
 		}
 
-		public static readonly DependencyProperty PointsProperty = DependencyProperty.Register(
-			"Points", typeof(SoundPointCollection), typeof(SoundControl),
-			new FrameworkPropertyMetadata(new SoundPointCollection(), PointsCollectionChanged));
-
-		public SoundPointCollection Points
+		private static void ProjectPropertyChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
 		{
-			get => (SoundPointCollection)GetValue(PointsProperty);
-			set => SetValue(PointsProperty, value);
-		}
+			SoundControl sc = (SoundControl)d;
 
-		private static void PointsCollectionChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-		{
-			var ptc = (d as SoundControl);
-
-			if (e.OldValue != null)
+			SoundProject p;
+			p = e.OldValue as SoundProject;
+			if (p != null)
 			{
-				var spc = (SoundPointCollection)e.OldValue;
-				spc.CollectionChanged -= ptc.Points_CollectionChanged;
-				spc.PointPropertyChanged -= ptc.Points_PointPropertyChanged;
+				p.Points.CollectionChanged -= Points_CollectionChanged1;
+				p.Points.PointPropertyChanged -= Points_PointPropertyChanged1;
 			}
 
-			if (e.NewValue != null)
+			p = e.NewValue as SoundProject;
+
+			if (p != null)
 			{
-				var spc = (SoundPointCollection)e.NewValue;
-				spc.CollectionChanged += ptc.Points_CollectionChanged;
-				spc.PointPropertyChanged += ptc.Points_PointPropertyChanged;
+				p.Points.CollectionChanged += Points_CollectionChanged1;
+				p.Points.PointPropertyChanged += Points_PointPropertyChanged1;
 			}
 		}
 
-		private void Points_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+		private static void Points_PointPropertyChanged1(object sender, PropertyChangedEventArgs e)
 		{
-			InvalidateVisual();
+			((SoundControl)sender).InvalidateVisual();
 		}
 
-		private void Points_PointPropertyChanged(object sender, PropertyChangedEventArgs e)
+		private static void Points_CollectionChanged1(object sender, NotifyCollectionChangedEventArgs e)
 		{
-			InvalidateVisual();
+			((SoundControl)sender).InvalidateVisual();
 		}
 
-		public static readonly DependencyProperty SelectedPointsProperty = DependencyProperty.Register(
-			"SelectedPoints", typeof(SoundPointCollection), typeof(SoundControl),
-			new FrameworkPropertyMetadata(new SoundPointCollection(), FrameworkPropertyMetadataOptions.AffectsRender, null));
-
-		public SoundPointCollection SelectedPoints
-		{
-			get => (SoundPointCollection)GetValue(SelectedPointsProperty);
-			set => SetValue(SelectedPointsProperty, value);
-		}
-
-		public static readonly DependencyProperty AddPointEventProperty = DependencyProperty.Register(
-			"AddPointEvent", typeof(SoundPointEvent), typeof(SoundControl));
-
-		public Action<SoundPoint> AddPointEvent
-		{
-			get => (Action<SoundPoint>)GetValue(AddPointEventProperty);
-			set => SetValue(AddPointEventProperty, value);
-		}
-
-		public static readonly DependencyProperty DeletePointEventProperty = DependencyProperty.Register(
-			"DeletePointEvent", typeof(SoundPointEvent), typeof(SoundControl));
-
-		public SoundPointEvent DeletePointEvent
-		{
-			get => (SoundPointEvent)GetValue(DeletePointEventProperty);
-			set => SetValue(DeletePointEventProperty, value);
-		}
 
 		#endregion
 
@@ -200,8 +165,8 @@ namespace SoundMap.Controls
 
 			FRenderPoints.Clear();
 
-			if ((Points != null) && (Project != null))
-				foreach (var p in Points)
+			if (Project != null)
+				foreach (var p in Project.Points)
 				{
 					var c = GetPointXY(p);
 
@@ -249,9 +214,9 @@ namespace SoundMap.Controls
 
 			try
 			{
-				if ((toDelete != null) && (DeletePointEvent != null))
+				if ((toDelete != null) && (Project != null))
 				{
-					DeletePointEvent.Invoke(toDelete.Link);
+					Project.Points.Remove(toDelete.Link);
 					return;
 				}
 
