@@ -8,21 +8,19 @@ namespace SoundMap
 	public delegate void SoundPointEvent(SoundPoint APoint);
 
 	[Serializable]
-	public class SoundPoint : Observable
+	public class SoundPoint : Observable, ICloneable
 	{
-		//// Желаемый диапазон частот
-		//private const double FMin = 80;
-		//private const double FMax = 800;
-		//// Горизонтальная шкала - степень двойки (степень линейна). Далее максимальные и минимальные значения этой шкалы
-		//private readonly double LogFMin = Math.Log(FMin, 2);
-		//private readonly double LogFMax = Math.Log(FMax, 2);
-
 		private bool FIsSelected = false;
 
 		private bool FIsSolo = false;
 		private bool FIsMute = false;
 		private PointKind FKind = PointKind.Static;
 		private double FStartTime = double.NaN;
+
+		private double FVolume = 0;
+		private double FFrequency = 0;
+		private double FPhaseOffset = 0;
+		private double FOldFrequency = double.NaN;
 
 		public event Action<SoundPoint> RemoveSelf;
 
@@ -82,24 +80,46 @@ namespace SoundMap
 			}
 		}
 
-		/// <summary>
-		/// Необходима для группового перемещения
-		/// </summary>
+		/// <summary>Необходима для группового перемещения</summary>
 		[XmlIgnore]
-		public Point StartRelative { get; set; }
+		public SoundPoint Start { get; set; }
 
-		//object ICloneable.Clone()
-		//{
-		//	return Clone();
-		//}
+		object ICloneable.Clone()
+		{
+			return Clone();
+		}
 
-		//public SoundPoint Clone()
-		//{
-		//	return new SoundPoint(FRelative);
-		//}
+		public SoundPoint Clone()
+		{
+			return (SoundPoint)MemberwiseClone();
+		}
 
-		public double Volume { get; set; } = 0;
-		public double Frequency { get; set; } = 0;
+		public double Volume
+		{
+			get => FVolume;
+			set
+			{
+				if (FVolume != value)
+				{
+					FVolume = value;
+					NotifyPropertyChanged(nameof(Volume));
+				}
+			}
+		}
+
+		public double Frequency
+		{
+			get => FFrequency;
+			set
+			{
+				if (FFrequency != value)
+				{
+					FOldFrequency = FFrequency;
+					FFrequency = value;
+					NotifyPropertyChanged(nameof(Frequency));
+				}
+			}
+		}
 
 		public override string ToString()
 		{
@@ -111,7 +131,15 @@ namespace SoundMap
 			switch (Kind)
 			{
 				case PointKind.Static:
-					return Math.Sin(Frequency * ATime * Math.PI * 2);
+					if (!double.IsNaN(FOldFrequency) && (FOldFrequency != 0))
+					{
+						// Получаю значение каким бы оно должно быть
+						var oldV = Math.Sin(FOldFrequency * ATime * Math.PI * 2 + FPhaseOffset);
+						// Вычисление угла чтобы текущее значение...
+						FPhaseOffset = Math.Asin(oldV) - 2 * Math.PI * Frequency * ATime;
+						FOldFrequency = double.NaN;
+					}
+					return Math.Sin(Frequency * ATime * Math.PI * 2 + FPhaseOffset);
 				case PointKind.Bell:
 					if (double.IsNaN(FStartTime))
 						FStartTime = ATime;

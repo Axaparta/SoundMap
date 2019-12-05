@@ -38,8 +38,7 @@ namespace SoundMap
 				if (FMinFrequency != value)
 				{
 					FMinFrequency = value;
-					//FLogFMin = Math.Log(FMinFrequency, 2);
-					Points_PointPropertyChanged(null, null);
+					NotifyPropertyChanged(nameof(MinFrequency));
 				}
 			}
 		}
@@ -51,8 +50,7 @@ namespace SoundMap
 				if (FMaxFrequency != value)
 				{
 					FMaxFrequency = value;
-					//FLogFMax = Math.Log(FMaxFrequency, 2);
-					Points_PointPropertyChanged(null, null);
+					NotifyPropertyChanged(nameof(MaxFrequency));
 				}
 			}
 		}
@@ -63,7 +61,6 @@ namespace SoundMap
 		public PointKind NewPointKind { get; set; } = PointKind.Static;
 
 		private SoundPointEvent FSoundControlAddPointAction = null;
-		private SoundPointEvent FSoundControlDeletePointAction = null;
 		private SoundPoint FSelectedPoint = null;
 
 		public SoundProject()
@@ -224,7 +221,7 @@ namespace SoundMap
 					FSoundControlAddPointAction = new SoundPointEvent((sp) =>
 					{
 						sp.Kind = NewPointKind;
-						AddPoint(sp);
+						Points.Add(sp);
 					});
 				return FSoundControlAddPointAction;
 			}

@@ -68,12 +68,8 @@
 
 				<localControls:SoundControl
 					Grid.Column="0" Grid.Row="0"
-					AddPointEvent ="{Binding Project.SoundControlAddPointAction}"
-					DeletePointEvent="{Binding Project.SoundControlDeletePointAction}"
 					SnapsToDevicePixels="True"
-					Points="{Binding Project.Points}"
-					Project="{Binding Project}"
-					SelectedPoints="{Binding Project.SelectedPoints}" />
+					Project="{Binding Project}" />
 
 				<StackPanel Grid.Row="0" Grid.Column="1" Orientation="Vertical">
 					<StackPanel.Resources>

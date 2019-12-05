@@ -126,27 +126,29 @@ namespace SoundMap.Controls
 			p = e.OldValue as SoundProject;
 			if (p != null)
 			{
-				p.Points.CollectionChanged -= Points_CollectionChanged1;
-				p.Points.PointPropertyChanged -= Points_PointPropertyChanged1;
+				p.PropertyChanged -= sc.Points_PointPropertyChanged;
+				p.Points.CollectionChanged -= sc.Points_CollectionChanged;
+				p.Points.PointPropertyChanged -= sc.Points_PointPropertyChanged;
 			}
 
 			p = e.NewValue as SoundProject;
 
 			if (p != null)
 			{
-				p.Points.CollectionChanged += Points_CollectionChanged1;
-				p.Points.PointPropertyChanged += Points_PointPropertyChanged1;
+				p.PropertyChanged += sc.Points_PointPropertyChanged;
+				p.Points.CollectionChanged += sc.Points_CollectionChanged;
+				p.Points.PointPropertyChanged += sc.Points_PointPropertyChanged;
 			}
 		}
 
-		private static void Points_PointPropertyChanged1(object sender, PropertyChangedEventArgs e)
+		private void Points_PointPropertyChanged(object sender, PropertyChangedEventArgs e)
 		{
-			((SoundControl)sender).InvalidateVisual();
+			InvalidateVisual();
 		}
 
-		private static void Points_CollectionChanged1(object sender, NotifyCollectionChangedEventArgs e)
+		private void Points_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
 		{
-			((SoundControl)sender).InvalidateVisual();
+			InvalidateVisual();
 		}
 
 
@@ -208,24 +210,27 @@ namespace SoundMap.Controls
 
 		protected override void OnMouseDoubleClick(MouseButtonEventArgs e)
 		{
-			var p = e.GetPosition(this);
+			if (Project == null)
+				return;
 
+			var p = e.GetPosition(this);
 			RenderPoint toDelete = GetPointAtMouse(p);
 
 			try
 			{
-				if ((toDelete != null) && (Project != null))
+				if (toDelete == null)
 				{
-					Project.Points.Remove(toDelete.Link);
-					return;
-				}
-
-				if (AddPointEvent != null)
-				{
-					AddPointEvent.Invoke(CreateSoundPointFromXY(p));
-					foreach (var pts in Points)
+					var newPoint = new SoundPoint()
+					{
+						Frequency = GetFrequency(p),
+						Volume = GetVolume(p)
+					};
+					Project.Points.Add(newPoint);
+					foreach (var pts in Project.Points)
 						pts.IsSelected = pts == newPoint;
 				}
+				else
+					Project.Points.Remove(toDelete.Link);
 			}
 			finally
 			{
@@ -242,28 +247,33 @@ namespace SoundMap.Controls
 				FDownPoint = p;
 				FSelectedRect = Rect.Empty;
 
+				if (Project == null)
+					return;
+
+				var pts = Project.Points;
+
 				var hp = GetPointAtMouse(p);
 				if (hp == null)
 				{
 					// Если жмётся пустое место, то снять все выделения
-					Points.ChangedLock();
-					foreach (var pts in Points)
-						pts.IsSelected = false;
-					Points.ChangedUnlock();
+					pts.ChangedLock();
+					foreach (var sp in pts)
+						sp.IsSelected = false;
+					pts.ChangedUnlock();
 				}
 				else
 				{
 					// Если выбирается невыделенный, то сбросить выделения других
 					if (!hp.Link.IsSelected)
 					{
-						Points.ChangedLock();
-						foreach (var pts in Points)
-							pts.IsSelected = pts == hp.Link;
-						Points.ChangedUnlock();
+						pts.ChangedLock();
+						foreach (var sp in pts)
+							sp.IsSelected = sp == hp.Link;
+						pts.ChangedUnlock();
 					}
 
-					foreach (var pts in SelectedPoints)
-						pts.StartRelative = pts.Relative;
+					foreach (var sp in Project.SelectedPoints)
+						sp.Start = sp.Clone();
 
 					FIsMoveMode = true;
 				}
@@ -278,6 +288,9 @@ namespace SoundMap.Controls
 
 		protected override void OnMouseMove(MouseEventArgs e)
 		{
+			if (Project == null)
+				return;
+
 			var p = e.GetPosition(this);
 			var pixelOffset = p - FDownPoint;
 
@@ -299,12 +312,14 @@ namespace SoundMap.Controls
 						pixelOffset.X = 0;
 				}
 
-				var relativeOffset = new Vector(pixelOffset.X / ActualWidth, pixelOffset.Y / ActualHeight);
-
-				Points.ChangedLock();
-				foreach (var pts in SelectedPoints)
-					pts.Relative = Point.Add(pts.StartRelative, relativeOffset);
-				Points.ChangedUnlock(true);
+				var pts = Project.SelectedPoints;
+				pts.ChangedLock();
+				for (int i = 0; i < pts.Count; i++)
+				{
+					var sp = pts[i];
+					SoundPointOffset(sp, sp.Start, pixelOffset);
+				}
+				pts.ChangedUnlock(true);
 
 				InvalidateVisual();
 			}
@@ -338,22 +353,20 @@ namespace SoundMap.Controls
 			base.OnMouseMove(e);
 		}
 
-		protected override void OnMouseLeave(MouseEventArgs e)
-		{
-			//OnMouseUp(new MouseButtonEventArgs(e.Device, e.Timestamp, e.MouseDevice.M)
-		}
-
 		protected override void OnMouseUp(MouseButtonEventArgs e)
 		{
+			if (Project == null)
+				return;
+
 			if (e.LeftButton == MouseButtonState.Released)
 			{
 				FIsMoveMode = false;
 				if (!FSelectedRect.IsEmpty)
 				{
-					Points.ChangedLock();
+					Project.Points.ChangedLock();
 					foreach (var rp in FRenderPoints)
 						rp.Link.IsSelected = rp.Inside(FSelectedRect);
-					Points.ChangedUnlock();
+					Project.Points.ChangedUnlock();
 
 					FSelectedRect = Rect.Empty;
 					InvalidateVisual();
@@ -364,6 +377,22 @@ namespace SoundMap.Controls
 
 		protected override void OnKeyDown(KeyEventArgs e)
 		{
+			if (Project == null)
+				return;
+
+			Project.Points.ChangedLock();
+
+			void Offset(int dX, int dY)
+			{
+				var v = new Vector(dX, dY);
+				for (int i = 0; i < Project.SelectedPoints.Count; i++)
+				{
+					var sp = Project.SelectedPoints[i];
+					SoundPointOffset(sp, sp, v);
+				}
+				e.Handled = true;
+			}
+
 			switch (e.Key)
 			{
 				case Key.LeftShift:
@@ -376,46 +405,30 @@ namespace SoundMap.Controls
 					}
 					break;
 				case Key.Left:
-					Points.ChangedLock();
-					foreach (var p in SelectedPoints)
-						p.Relative = new Point(p.Relative.X - 1 / ActualWidth, p.Relative.Y);
-					Points.ChangedUnlock();
-					e.Handled = true;
+					Offset(-1, 0);
 					break;
 				case Key.Right:
-					Points.ChangedLock();
-					foreach (var p in SelectedPoints)
-						p.Relative = new Point(p.Relative.X + 1 / ActualWidth, p.Relative.Y);
-					Points.ChangedUnlock();
-					e.Handled = true;
+					Offset(1, 0);
 					break;
 				case Key.Up:
-					Points.ChangedLock();
-					foreach (var p in SelectedPoints)
-						p.Relative = new Point(p.Relative.X, p.Relative.Y - 1 / ActualHeight);
-					Points.ChangedUnlock();
-					e.Handled = true;
+					Offset(0, -1);
 					break;
 				case Key.Down:
-					Points.ChangedLock();
-					foreach (var p in SelectedPoints)
-						p.Relative = new Point(p.Relative.X, p.Relative.Y + 1 / ActualHeight);
-					Points.ChangedUnlock();
-					e.Handled = true;
+					Offset(0, +1);
 					break;
 				case Key.S:
-					if (SelectedPoints.Count == 1)
-						SelectedPoints[0].IsSolo = !SelectedPoints[0].IsSolo;
+					if (Project.SelectedPoints.Count == 1)
+						Project.SelectedPoints[0].IsSolo = !Project.SelectedPoints[0].IsSolo;
 					e.Handled = true;
 					break;
 				case Key.M:
-					Points.ChangedLock();
-					foreach (var p in SelectedPoints)
-						p.IsMute = !p.IsMute;
-					Points.ChangedUnlock();
+					for (int i = 0; i < Project.SelectedPoints.Count; i++)
+						Project.SelectedPoints[i].IsMute = !Project.SelectedPoints[i].IsMute;
 					e.Handled = true;
 					break;
 			}
+
+			Project.Points.ChangedUnlock();
 
 			base.OnKeyDown(e);
 		}
@@ -438,7 +451,7 @@ namespace SoundMap.Controls
 			double pow = Math.Log(APoint.Frequency, 2);
 			double rx = (pow - FLogFMin) / (FLogFMax - FLogFMin);
 
-			var p = new Point(ActualWidth * rx, ActualHeight * APoint.Volume);
+			var p = new Point(ActualWidth * rx, ActualHeight * (1 - APoint.Volume));
 
 			if (p.X < 0)
 				p.X = 0;
@@ -452,9 +465,28 @@ namespace SoundMap.Controls
 			return p;
 		}
 
-		public SoundPoint CreateSoundPointFromXY(Point APoint)
+		private double GetFrequency(Point APoint)
 		{
+			double FLogFMin = Math.Log(Project.MinFrequency, 2);
+			double FLogFMax = Math.Log(Project.MaxFrequency, 2);
+			var pow = FLogFMin + (FLogFMax - FLogFMin) * APoint.X / ActualWidth;
+			return Math.Pow(2, pow);
+		}
 
+		private double GetVolume(Point APoint)
+		{
+			return 1 - APoint.Y / ActualHeight;
+		}
+
+		private void SoundPointOffset(SoundPoint APoint, SoundPoint AStartPoint, Vector AOffset)
+		{
+			// Прежняя позиция точки
+			var spXY = GetPointXY(AStartPoint);
+			// Новая позиция
+			spXY += AOffset;
+			// Новая частота и громкость
+			APoint.Frequency = GetFrequency(spXY);
+			APoint.Volume = GetVolume(spXY);
 		}
 	}
 }
