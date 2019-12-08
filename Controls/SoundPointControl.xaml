@@ -25,7 +25,7 @@
 
 		<DockPanel>
 			<Label Style="{StaticResource HeaderLabel}" Content="Frequency" Grid.Row="0" Grid.Column="0" />
-			<Label Content="{Binding ElementName=This, Path=Point.Frequency, FallbackValue='-', StringFormat='F2'}" Grid.Row="0" Grid.Column="1"  />
+			<Label Content="{Binding ElementName=This, Path=Point, FallbackValue='-'}" Grid.Row="0" Grid.Column="1"  />
 		</DockPanel>
 		<CheckBox Content="Mute" IsChecked="{Binding ElementName=This, Path=Point.IsMute, FallbackValue=False}" IsEnabled="{Binding ElementName=This, Path=IsPointEnabled}" />
 		<CheckBox Content="Solo" IsChecked="{Binding ElementName=This, Path=Point.IsSolo, FallbackValue=False}" IsEnabled="{Binding ElementName=This, Path=IsPointEnabled}" />
