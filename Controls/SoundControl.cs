@@ -161,9 +161,9 @@ namespace SoundMap.Controls
 			var actualBounds = new Rect(0, 0, ActualWidth, ActualHeight);
 
 			if (IsFocused)
-				drawingContext.DrawRectangle(SystemColors.WindowBrush, new Pen(SystemColors.ControlDarkBrush, 2), actualBounds);
+				drawingContext.DrawRectangle(Background, new Pen(SystemColors.ControlDarkBrush, 2), actualBounds);
 			else
-				drawingContext.DrawRectangle(SystemColors.WindowBrush, null, actualBounds);
+				drawingContext.DrawRectangle(Background, null, actualBounds);
 
 			FRenderPoints.Clear();
 

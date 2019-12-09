@@ -14,12 +14,16 @@
 	Name="This"
 	Height="450" Width="800">
 	<Window.Background>
-		<SolidColorBrush Color="{DynamicResource {x:Static SystemColors.ControlColorKey}}"/>
+		<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+			<GradientStop Color="#FF363636" Offset="0"/>
+			<GradientStop Color="#FF363636" Offset="1"/>
+			<GradientStop Color="#FF6F6F6F" Offset="0.361"/>
+		</LinearGradientBrush>
 	</Window.Background>
 	<Window.InputBindings>
 		<KeyBinding Key="Pause" Command="{Binding IsPauseCommand}"/>
 		<KeyBinding Key="Esc" Command="{Binding ExitCommand}"/>
-		
+
 		<KeyBinding Key="N" Modifiers="Ctrl" Command="{Binding NewProjectCommand}" />
 		<KeyBinding Key="S" Modifiers="Ctrl" Command="{Binding SaveProjectCommand}" />
 		<KeyBinding Key="O" Modifiers="Ctrl" Command="{Binding OpenProjectCommand}" />
@@ -69,7 +73,14 @@
 				<localControls:SoundControl
 					Grid.Column="0" Grid.Row="0"
 					SnapsToDevicePixels="True"
-					Project="{Binding Project}" />
+					Project="{Binding Project}" >
+					<localControls:SoundControl.Background>
+						<LinearGradientBrush EndPoint="1,0" StartPoint="0,1">
+							<GradientStop Color="#FF47645E" Offset="0"/>
+							<GradientStop Color="#FFAAB9B6" Offset="1"/>
+						</LinearGradientBrush>
+					</localControls:SoundControl.Background>
+				</localControls:SoundControl>
 
 				<StackPanel Grid.Row="0" Grid.Column="1" Orientation="Vertical">
 					<StackPanel.Resources>
@@ -94,16 +105,30 @@
 							<local:PointKind>Saw</local:PointKind>
 						</Button.CommandParameter>
 					</Button>
-					
+
 				</StackPanel>
 			</Grid>
 
-			<DockPanel Grid.Row="2">
+			<DockPanel Grid.Row="2" VerticalAlignment="Top">
+				<DockPanel.Resources>
+					<Style TargetType="TextBlock">
+						<Setter Property="Foreground" Value="White" />
+						<Setter Property="Margin" Value="5,0,3,0" />
+					</Style>
+				</DockPanel.Resources>
 				<localControls:SoundPointControl
+					Margin="0,0,10,0"
+					Foreground="White"
 					Point="{Binding Project.SelectedPoint}"
-					DockPanel.Dock="Left"
-					Width="120" />
-				<StackPanel DockPanel.Dock="Left" Width="50" HorizontalAlignment="Left">
+					VerticalAlignment="Center"
+					VerticalContentAlignment="Center"
+					DockPanel.Dock="Left" />
+				<StackPanel DockPanel.Dock="Left" HorizontalAlignment="Left" Orientation="Horizontal">
+					<StackPanel.Resources>
+						<Style TargetType="TextBox">
+							<Setter Property="Width" Value="40" />
+						</Style>
+					</StackPanel.Resources>
 					<TextBlock Text="MaxF" />
 					<TextBox Text="{Binding Project.MaxFrequency, Mode=TwoWay}" KeyDown="TextBox_KeyDown" />
 					<TextBlock Text="MinF" />
@@ -112,5 +137,5 @@
 			</DockPanel>
 		</Grid>
 	</DockPanel>
-	
+
 </Window>

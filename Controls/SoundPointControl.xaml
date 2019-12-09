@@ -6,8 +6,8 @@
 	xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
 	mc:Ignorable="d" 
 	Name="This"
-	d:DesignHeight="150" d:DesignWidth="150">
-	<StackPanel Orientation="Vertical">
+	d:DesignHeight="50" d:DesignWidth="250">
+	<StackPanel Orientation="Horizontal">
 		<StackPanel.Resources>
 			<Style TargetType="Label">
 				<Setter Property="Padding" Value="0" />
@@ -23,11 +23,29 @@
 			</Style>
 		</StackPanel.Resources>
 
-		<DockPanel>
-			<Label Style="{StaticResource HeaderLabel}" Content="Frequency" Grid.Row="0" Grid.Column="0" />
-			<Label Content="{Binding ElementName=This, Path=Point, FallbackValue='-'}" Grid.Row="0" Grid.Column="1"  />
-		</DockPanel>
-		<CheckBox Content="Mute" IsChecked="{Binding ElementName=This, Path=Point.IsMute, FallbackValue=False}" IsEnabled="{Binding ElementName=This, Path=IsPointEnabled}" />
-		<CheckBox Content="Solo" IsChecked="{Binding ElementName=This, Path=Point.IsSolo, FallbackValue=False}" IsEnabled="{Binding ElementName=This, Path=IsPointEnabled}" />
+		<Label VerticalAlignment="Center" Foreground="{Binding ElementName=This, Path=Foreground}" Style="{StaticResource HeaderLabel}" Content="Frequency" Grid.Row="0" Grid.Column="0" Margin="3,-1,5,6" />
+		<Grid VerticalAlignment="Center" Width="45" Height="20" >
+			<Label
+				HorizontalContentAlignment="Left"
+				VerticalContentAlignment="Center"
+				Foreground="{Binding ElementName=This, Path=Foreground}"
+				Content="{Binding ElementName=This, Path=Point, FallbackValue='-'}" />
+			<Rectangle Stroke="{Binding ElementName=This, Path=Foreground}" />
+		</Grid>
+		
+		<CheckBox
+			VerticalAlignment="Center"
+			VerticalContentAlignment="Center"
+			Foreground="{Binding ElementName=This, Path=Foreground}"
+			Content="Mute"
+			IsChecked="{Binding ElementName=This, Path=Point.IsMute, FallbackValue=False}"
+			IsEnabled="{Binding ElementName=This, Path=IsPointEnabled}" />
+		<CheckBox
+			VerticalAlignment="Center"
+			VerticalContentAlignment="Center"
+			Foreground="{Binding ElementName=This, Path=Foreground}"
+			Content="Solo"
+			IsChecked="{Binding ElementName=This, Path=Point.IsSolo, FallbackValue=False}"
+			IsEnabled="{Binding ElementName=This, Path=IsPointEnabled}" />
 	</StackPanel>
 </UserControl>
