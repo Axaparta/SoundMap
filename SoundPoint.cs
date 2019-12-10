@@ -1,5 +1,7 @@
 ﻿
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Xml.Serialization;
 
@@ -28,6 +30,10 @@ namespace SoundMap
 		private double FTransitionTimeLength = double.NaN;
 
 		public event Action<SoundPoint> RemoveSelf;
+
+		//public static PointKind[] PointKinds { get; } = Enum.GetValues(typeof(PointKind)).Cast<PointKind>().ToArray();
+		public static KeyValuePair<PointKind, string>[] PointKinds { get; } = Enum.GetValues(typeof(PointKind)).Cast<PointKind>().Select(p => new KeyValuePair<PointKind, string>(p, p.ToString())).ToArray();
+
 
 		[XmlIgnore]
 		public bool IsSelected

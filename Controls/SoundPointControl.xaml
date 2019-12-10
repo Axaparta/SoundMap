@@ -4,6 +4,7 @@
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
 	xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+	xmlns:local="clr-namespace:SoundMap"
 	mc:Ignorable="d" 
 	Name="This"
 	d:DesignHeight="50" d:DesignWidth="250">
@@ -47,5 +48,10 @@
 			Content="Solo"
 			IsChecked="{Binding ElementName=This, Path=Point.IsSolo, FallbackValue=False}"
 			IsEnabled="{Binding ElementName=This, Path=IsPointEnabled}" />
+		<ComboBox
+			SelectedValuePath="Key"
+			SelectedValue="{Binding ElementName=This, Path=Point.Kind}"
+			DisplayMemberPath="Value"
+			ItemsSource="{x:Static local:SoundPoint.PointKinds}" VerticalAlignment="Center" Width="70" />
 	</StackPanel>
 </UserControl>
