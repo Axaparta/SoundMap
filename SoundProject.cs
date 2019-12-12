@@ -167,17 +167,17 @@ namespace SoundMap
 
 			for (int n = offset; n < maxn; n++)
 			{
-				var op = (float)GetValue(points, FTime);
+				var op = GetValue(points, FTime);
 
 				switch (WaveFormat.Channels)
 				{
 					case 1:
-						buffer[n] = op;
+						buffer[n] = (float)op.Right;
 						break;
 					case 2:
-						buffer[n] = op;
+						buffer[n] = (float)op.Right;
 						n++;
-						buffer[n] = op;
+						buffer[n] = (float)op.Left;
 						break;
 					default:
 						throw new NotSupportedException($"Channels count: " + WaveFormat.Channels);
@@ -189,10 +189,10 @@ namespace SoundMap
 			return count;
 		}
 
-		public double GetValue(SoundPoint[] APoints, double ATime)
+		public SoundPointValue GetValue(SoundPoint[] APoints, double ATime)
 		{
 			double max = 0;
-			double r = 0;
+			SoundPointValue r = new SoundPointValue();
 			foreach (var p in APoints)
 			{
 				if (p.IsMute)

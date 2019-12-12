@@ -9,6 +9,38 @@ namespace SoundMap
 {
 	public delegate void SoundPointEvent(SoundPoint APoint);
 
+	public struct SoundPointValue
+	{
+		public double Left { get; set; }
+		public double Right { get; set; }
+
+		public SoundPointValue(double ALeft, double ARight)
+		{
+			Left = ALeft;
+			Right = ARight;
+		}
+
+		public static SoundPointValue operator *(double AMultipler, SoundPointValue AValue)
+		{
+			return new SoundPointValue(AMultipler * AValue.Left, AMultipler * AValue.Right);
+		}
+
+		public static SoundPointValue operator *(SoundPointValue AValue, double AMultipler)
+		{
+			return new SoundPointValue(AMultipler * AValue.Left, AMultipler * AValue.Right);
+		}
+
+		public static SoundPointValue operator /(SoundPointValue AValue, double ADivider)
+		{
+			return new SoundPointValue(AValue.Left/ADivider, AValue.Right/ADivider);
+		}
+
+		public static SoundPointValue operator +(SoundPointValue AValueA, SoundPointValue AValueB)
+		{
+			return new SoundPointValue(AValueA.Left + AValueB.Left, AValueA.Right + AValueB.Right);
+		}
+	}
+
 	[Serializable]
 	public class SoundPoint : Observable, ICloneable
 	{
@@ -17,13 +49,17 @@ namespace SoundMap
 		private bool FIsSolo = false;
 		private bool FIsMute = false;
 		private PointKind FKind = PointKind.Static;
-		private double FStartTime = double.NaN;
+		private double FLFrequencyDelta = 0;
 
 		private double FVolume = 0;
-		private double FFrequency = 0;
+		private double FRFrequency = 0;
 
-		private double FNewFrequency = double.NaN;
-		private double FOldFrequency = double.NaN;
+		private double FNewRFrequency = double.NaN;
+		private double FOldRFrequency = double.NaN;
+
+		private double FNewLFrequencyDelta = 0;
+		private double FOldLFrequencyDelta = 0;
+
 		private double FTimeOffset = 0; 
 
 		private double FTransitionTimeStart = double.NaN;
@@ -91,6 +127,8 @@ namespace SoundMap
 			}
 		}
 
+		
+
 		/// <summary>Необходима для группового перемещения</summary>
 		[XmlIgnore]
 		public SoundPoint Start { get; set; }
@@ -118,16 +156,32 @@ namespace SoundMap
 			}
 		}
 
-		public double Frequency
+		public double LeftFrequencyDelta
 		{
-			get => FFrequency;
+			get => FLFrequencyDelta;
 			set
 			{
-				if (FFrequency != value)
+				if (FLFrequencyDelta != value)
 				{
-					FOldFrequency = FFrequency;
-					FNewFrequency = value;
-					FFrequency = value;
+					FOldLFrequencyDelta = FLFrequencyDelta;
+					FNewLFrequencyDelta = value;
+					FLFrequencyDelta = value;
+					FNewRFrequency = FRFrequency;
+					NotifyPropertyChanged(nameof(LeftFrequencyDelta));
+				}
+			}
+		}
+
+		public double Frequency
+		{
+			get => FRFrequency;
+			set
+			{
+				if (FRFrequency != value)
+				{
+					FOldRFrequency = FRFrequency;
+					FNewRFrequency = value;
+					FRFrequency = value;
 					NotifyPropertyChanged(nameof(Frequency));
 				}
 			}
@@ -138,33 +192,45 @@ namespace SoundMap
 			return Frequency.ToString("F2");
 		}
 
-		public double GetValue(double ATime)
+		private double GetValue(double AFrequency, double ATime)
 		{
-			var oldValue = Math.Sin(FOldFrequency * (ATime - FTimeOffset) * Math.PI * 2);
+			return Math.Sin(AFrequency * ATime * Math.PI * 2);
+		}
 
-			if (!double.IsNaN(FNewFrequency))
+		public SoundPointValue GetValue(double ATime)
+		{
+			var oldRValue = GetValue(FOldRFrequency, ATime - FTimeOffset);
+			var oldLValue = GetValue(FOldRFrequency + FOldLFrequencyDelta, ATime - FTimeOffset);
+
+			if (!double.IsNaN(FNewRFrequency))
 			{
 				if (double.IsNaN(FTransitionTimeStart))
 				{
-					FTransitionTimeLength = 4 / FNewFrequency;
+					FTransitionTimeLength = 4 / FNewRFrequency;
 					FTransitionTimeStart = ATime;
 				}
 
-				var newValue = Math.Sin(FNewFrequency * (ATime - FTransitionTimeStart) * Math.PI * 2);
+				var newRValue = GetValue(FNewRFrequency, ATime - FTransitionTimeStart);
+				var newLValue = GetValue(FNewRFrequency + FNewLFrequencyDelta, ATime - FTransitionTimeStart);
 
 				var transPct = (ATime - FTransitionTimeStart) / FTransitionTimeLength;
 
-				oldValue = (1 - transPct) * oldValue + transPct * newValue;
+				oldRValue = (1 - transPct) * oldRValue + transPct * newRValue;
+				oldLValue = (1 - transPct) * oldLValue + transPct * newLValue;
+
 				if (ATime - FTransitionTimeStart >= FTransitionTimeLength)
 				{
 					FTimeOffset = FTransitionTimeStart;
-					FOldFrequency = FNewFrequency;
-					FNewFrequency = double.NaN;
 					FTransitionTimeStart = double.NaN;
+
+					FOldRFrequency = FNewRFrequency;
+					FNewRFrequency = double.NaN;
+
+					FOldLFrequencyDelta = FNewLFrequencyDelta;
 				}
 			}
 
-			return oldValue;
+			return new SoundPointValue(oldLValue, oldRValue);
 
 			//switch (Kind)
 			//{
