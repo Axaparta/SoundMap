@@ -5,3 +5,6 @@ bin/
 obj/
 packages/
 .git/
+Bin/
+BinOld/
+Media/*

@@ -1,9 +1,11 @@
 ﻿using NAudio.CoreAudioApi;
 using NAudio.Wave;
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
+using System.Windows.Input;
 
 namespace SoundMap
 {
@@ -33,9 +35,11 @@ namespace SoundMap
 		private RelayCommand FOpenProjectCommand = null;
 		private RelayCommand FSaveProjectCommand = null;
 		private RelayCommand FSaveProjectAsCommand = null;
+
 		private RelayCommand FExitCommand = null;
 		private RelayCommand FNewProjectCommand = null;
 		private RelayCommand FDeviceMenuItemCommand = null;
+
 		private RelayCommand FIsPauseCommand = null;
 		private RelayCommand FSetNewPointKindCommand = null;
 		private RelayCommand FSaveSampleCommand = null;
@@ -51,6 +55,16 @@ namespace SoundMap
 				FDevices = e.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active).ToArray();
 			}
 			StartPlay();
+
+			try
+			{
+				if (App.Args.Length == 1)
+					Project = SoundProject.CreateFromFile(App.Args[0]);
+			}
+			catch (Exception ex)
+			{
+				App.ShowError(ex.Message);
+			}
 		}
 
 		public SoundProject Project
@@ -307,6 +321,64 @@ namespace SoundMap
 					});
 				return FSaveSampleCommand;
 			}
+		}
+
+		public void KeyDown(Key AKey)
+		{
+			switch (AKey)
+			{
+				case Key.F1:
+					Project.DebugMode = true;
+					break;
+
+				case Key.Z:
+					Project.AddNoteByHalftone(AKey, -7);
+					break;
+				case Key.X:
+					Project.AddNoteByHalftone(AKey, -5);
+					break;
+				case Key.C:
+					Project.AddNoteByHalftone(AKey, -3);
+					break;
+				case Key.V:
+					Project.AddNoteByHalftone(AKey, -2);
+					break;
+
+				case Key.B:
+					Project.AddNoteByHalftone(AKey, 0);
+					break;
+
+				case Key.N:
+					Project.AddNoteByHalftone(AKey, 2);
+					break;
+				case Key.M:
+					Project.AddNoteByHalftone(AKey, 3);
+					break;
+				case Key.OemComma:
+					Project.AddNoteByHalftone(AKey, 5);
+					break;
+				case Key.OemPeriod:
+					Project.AddNoteByHalftone(AKey, 7);
+					break;
+				case Key.OemQuestion:
+					Project.AddNoteByHalftone(AKey, 9);
+					break;
+				default:
+					Debug.WriteLine(AKey);
+					break;
+			}
+		}
+
+		public void KeyUp(Key AKey)
+		{
+			switch (AKey)
+			{
+				case Key.F1:
+					Project.DebugMode = false;
+					break;
+			}
+
+			Project.DeleteNote(AKey);
 		}
 	}
 }

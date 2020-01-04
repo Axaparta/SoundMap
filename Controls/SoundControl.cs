@@ -139,6 +139,8 @@ namespace SoundMap.Controls
 				p.Points.CollectionChanged += sc.Points_CollectionChanged;
 				p.Points.PointPropertyChanged += sc.Points_PointPropertyChanged;
 			}
+
+			sc.InvalidateVisual();
 		}
 
 		private void Points_PointPropertyChanged(object sender, PropertyChangedEventArgs e)

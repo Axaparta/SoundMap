@@ -14,6 +14,8 @@ namespace SoundMap
 		public static readonly string ConfigurePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppName);
 		public static readonly string SettingsFileName = Path.Combine(ConfigurePath, "Settings.xml");
 		public static SoundMapSettings Settings { get; private set; }
+		public static string[] Args { get; private set; }
+
 
 		protected override void OnStartup(StartupEventArgs e)
 		{
@@ -31,6 +33,9 @@ namespace SoundMap
 				ShowError("Load settings error: " + ex.Message);
 				Settings = new SoundMapSettings();
 			}
+
+			Args = e.Args;
+
 			base.OnStartup(e);
 		}
 

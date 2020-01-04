@@ -28,5 +28,16 @@ namespace SoundMap
 			if (e.Key == Key.Return)
 				(sender as TextBox).GetBindingExpression(TextBox.TextProperty).UpdateSource();
 		}
+
+		private void This_KeyDown(object sender, KeyEventArgs e)
+		{
+			if (!e.IsRepeat)
+				((MainWindowModel)DataContext).KeyDown(e.Key);
+		}
+
+		private void This_KeyUp(object sender, KeyEventArgs e)
+		{
+			((MainWindowModel)DataContext).KeyUp(e.Key);
+		}
 	}
 }

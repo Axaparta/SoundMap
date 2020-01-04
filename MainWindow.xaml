@@ -12,13 +12,11 @@
 	WindowStartupLocation="CenterScreen"
 	Title="{Binding Project.Title, FallbackValue={x:Static local:App.AppName}}"
 	Name="This"
+	KeyDown="This_KeyDown"
+	KeyUp="This_KeyUp"
 	Height="450" Width="800">
 	<Window.Background>
-		<LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
-			<GradientStop Color="#FF363636" Offset="0"/>
-			<GradientStop Color="#FF363636" Offset="1"/>
-			<GradientStop Color="#FF6F6F6F" Offset="0.361"/>
-		</LinearGradientBrush>
+		<SolidColorBrush Color="{DynamicResource {x:Static SystemColors.AppWorkspaceColorKey}}"/>
 	</Window.Background>
 	<Window.InputBindings>
 		<KeyBinding Key="Pause" Command="{Binding IsPauseCommand}"/>
@@ -28,9 +26,9 @@
 		<KeyBinding Key="S" Modifiers="Ctrl" Command="{Binding SaveProjectCommand}" />
 		<KeyBinding Key="O" Modifiers="Ctrl" Command="{Binding OpenProjectCommand}" />
 	</Window.InputBindings>
-	<DockPanel Margin="5,0,5,5">
+	<DockPanel>
 		<Menu DockPanel.Dock="Top">
-			<MenuItem Header="File">
+			<MenuItem Header="Project">
 				<MenuItem Header="New project" InputGestureText="Ctrl+N" Command="{Binding NewProjectCommand}" />
 				<MenuItem Header="Open project..." InputGestureText="Ctrl+O" Command="{Binding OpenProjectCommand}" />
 				<MenuItem Header="Save project" InputGestureText="Ctrl+S" Command="{Binding SaveProjectCommand}" />
@@ -54,10 +52,14 @@
 				</MenuItem>
 			</MenuItem>
 		</Menu>
+		<StatusBar DockPanel.Dock="Bottom" IsManipulationEnabled="True">
+			<TextBlock Text="Test" />
+		</StatusBar>
 		<Grid>
 			<Grid.RowDefinitions>
 				<RowDefinition Height="1*"/>
 				<RowDefinition Height="5"/>
+				<RowDefinition Height="Auto"/>
 				<RowDefinition Height="1*"/>
 			</Grid.RowDefinitions>
 			<Grid.ColumnDefinitions>
@@ -134,6 +136,10 @@
 					<TextBlock Text="MinF" />
 					<TextBox Text="{Binding Project.MinFrequency, Mode=TwoWay}" KeyDown="TextBox_KeyDown" />
 				</StackPanel>
+			</DockPanel>
+
+			<DockPanel Grid.Row="3" VerticalAlignment="Top" LastChildFill="False">
+				<CheckBox Content="KeyboardMode" Foreground="White" IsChecked="{Binding Project.KeyboardMode}" />
 			</DockPanel>
 		</Grid>
 	</DockPanel>

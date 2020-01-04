@@ -1,9 +1,13 @@
 ﻿using NAudio.Wave;
 using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Xml.Serialization;
 
@@ -17,6 +21,8 @@ namespace SoundMap
 		private double FTime = 0;
 		private double FMinFrequency = 50;
 		private double FMaxFrequency = 2000;
+		private readonly Dictionary<object, Note> FNotes = new Dictionary<object, Note>();
+		private readonly object FPlayLock = new object();
 
 		[XmlIgnore]
 		public WaveFormat WaveFormat { get; private set; }
@@ -29,6 +35,14 @@ namespace SoundMap
 
 		[XmlIgnore]
 		public string FileName { get; set; }
+
+		[XmlIgnore]
+		public bool DebugMode { get; set; } = false;
+		private readonly Stopwatch FDebugStopwatch = new Stopwatch();
+		private long FOldStartRead = 0;
+
+		[XmlIgnore]
+		public bool KeyboardMode { get; set; } = false;
 
 		public double MinFrequency
 		{
@@ -68,6 +82,8 @@ namespace SoundMap
 			Points.CollectionChanged += Points_CollectionChanged;
 			Points.PointPropertyChanged += Points_PointPropertyChanged;
 			SelectedPoints.CollectionChanged += SelectedPoints_CollectionChanged;
+
+			FDebugStopwatch.Start();
 		}
 
 		public static SoundProject CreateFromFile(string AFileName)
@@ -159,15 +175,27 @@ namespace SoundMap
 
 		public int Read(float[] buffer, int offset, int count)
 		{
+			long startRead = FDebugStopwatch.ElapsedMilliseconds;
+
 			int maxn = offset + count;
-			int maxOldIndex = 60;
-			int oldIndex = maxOldIndex;
 
 			var points = Points.ToArray();
+#if false
+			
+			Note[] buf = null;
+			lock (FPlayLock)
+				buf = FNotes.Values.ToArray();
 
 			for (int n = offset; n < maxn; n++)
 			{
-				var op = GetValue(points, FTime);
+				SoundPointValue op = new SoundPointValue();
+				if (KeyboardMode)
+				{
+					for (int i = 0; i < buf.Length; i++)
+						op += buf[i].GetValue(FTime);
+				}
+				else
+					op = GetValue(points, FTime);
 
 				switch (WaveFormat.Channels)
 				{
@@ -185,7 +213,58 @@ namespace SoundMap
 
 				FTime += 1 / (double)WaveFormat.SampleRate;
 			}
+#else
+			double startTime = FTime;
+			Note[] buf = null;
+			lock (FPlayLock)
+				buf = FNotes.Values.ToArray();
 
+			switch (WaveFormat.Channels)
+			{
+				//case 1:
+				//	buffer[n] = (float)op.Right;
+				//	break;
+				case 2:
+					Parallel.For(0, count/2, (n) =>
+					{
+						var time = startTime + n / (double)WaveFormat.SampleRate;
+
+						SoundPointValue op = new SoundPointValue();
+						if (KeyboardMode)
+						{
+							for (int i = 0; i < buf.Length; i++)
+								op += buf[i].GetValue(time);
+						}
+						else
+							op = GetValue(points, time);
+
+						var index = offset + 2 * n;
+						buffer[index] = (float)op.Right;
+						index++;
+						buffer[index] = (float)op.Left;
+					});
+
+					FTime += (count / 2) / (double)WaveFormat.SampleRate;
+					break;
+				default:
+					throw new NotSupportedException($"Channels count: " + WaveFormat.Channels);
+			}
+#endif
+
+			long endRead = FDebugStopwatch.ElapsedMilliseconds;
+			var dotsPerChannel = count / WaveFormat.Channels;
+			var bufferTime = 1000 * dotsPerChannel / WaveFormat.SampleRate;
+
+			if (endRead - startRead >= bufferTime)
+				Debug.WriteLine("Overload! " + (endRead - startRead - bufferTime));
+
+			if (DebugMode)
+			{
+				Debug.WriteLine($"NewStart - OldStart = {startRead - FOldStartRead}, ThreadId: {Thread.CurrentThread.ManagedThreadId}");
+				Debug.WriteLine($"Start {startRead}, end {endRead}, D: {endRead - startRead}, Count: {count}, CTime (msec): {bufferTime}, (Saple/Sec): {WaveFormat.SampleRate}");
+			}
+
+			FOldStartRead = startRead;
 			return count;
 		}
 
@@ -208,7 +287,7 @@ namespace SoundMap
 			}
 
 			if (max > 1)
-				r = r / max;
+				r /= max;
 
 			return r;
 		}
@@ -226,18 +305,6 @@ namespace SoundMap
 				return FSoundControlAddPointAction;
 			}
 		}
-
-		//public void AddPoint(SoundPoint APoint)
-		//{
-		//	Points.Add(sp);
-		//}
-
-
-
-		//public void DeletePoint(SoundPoint APoint)
-		//{
-		//	Points.Remove(APoint);
-		//}
 
 		public void SaveToFile(string AFileName)
 		{
@@ -270,6 +337,34 @@ namespace SoundMap
 			{
 				App.ShowError(ex.Message);
 			}
+		}
+
+		public void AddNote(object AKey, double AMultipler)
+		{
+			var a = Points.Select(p =>
+			{
+				p = p.Clone();
+				p.Frequency *= AMultipler;
+				p.IsNote = true;
+				return p;
+			}).ToArray();
+
+			if (!FNotes.ContainsKey(AKey))
+				lock (FPlayLock)
+					FNotes.Add(AKey, new Note(a, WaveFormat));
+		}
+
+		public void AddNoteByHalftone(object AKey, int AHalftoneOffset)
+		{
+			var v = Math.Pow(2, (double)AHalftoneOffset / 12);
+			AddNote(AKey, v);
+		}
+
+		public void DeleteNote(object AKey)
+		{
+			if (FNotes.ContainsKey(AKey))
+				lock (FPlayLock)
+					FNotes.Remove(AKey);
 		}
 	}
 }

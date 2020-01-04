@@ -9,38 +9,6 @@ namespace SoundMap
 {
 	public delegate void SoundPointEvent(SoundPoint APoint);
 
-	public struct SoundPointValue
-	{
-		public double Left { get; set; }
-		public double Right { get; set; }
-
-		public SoundPointValue(double ALeft, double ARight)
-		{
-			Left = ALeft;
-			Right = ARight;
-		}
-
-		public static SoundPointValue operator *(double AMultipler, SoundPointValue AValue)
-		{
-			return new SoundPointValue(AMultipler * AValue.Left, AMultipler * AValue.Right);
-		}
-
-		public static SoundPointValue operator *(SoundPointValue AValue, double AMultipler)
-		{
-			return new SoundPointValue(AMultipler * AValue.Left, AMultipler * AValue.Right);
-		}
-
-		public static SoundPointValue operator /(SoundPointValue AValue, double ADivider)
-		{
-			return new SoundPointValue(AValue.Left/ADivider, AValue.Right/ADivider);
-		}
-
-		public static SoundPointValue operator +(SoundPointValue AValueA, SoundPointValue AValueB)
-		{
-			return new SoundPointValue(AValueA.Left + AValueB.Left, AValueA.Right + AValueB.Right);
-		}
-	}
-
 	[Serializable]
 	public class SoundPoint : Observable, ICloneable
 	{
@@ -69,6 +37,10 @@ namespace SoundMap
 
 		//public static PointKind[] PointKinds { get; } = Enum.GetValues(typeof(PointKind)).Cast<PointKind>().ToArray();
 		public static KeyValuePair<PointKind, string>[] PointKinds { get; } = Enum.GetValues(typeof(PointKind)).Cast<PointKind>().Select(p => new KeyValuePair<PointKind, string>(p, p.ToString())).ToArray();
+
+		/// <summary>True, когда являвется частью ноты. Необходима для оптимизации</summary>
+		[XmlIgnore]
+		public bool IsNote { get; set; } = false;
 
 
 		[XmlIgnore]
@@ -200,8 +172,12 @@ namespace SoundMap
 		public SoundPointValue GetValue(double ATime)
 		{
 			var oldRValue = GetValue(FOldRFrequency, ATime - FTimeOffset);
-			var oldLValue = GetValue(FOldRFrequency + FOldLFrequencyDelta, ATime - FTimeOffset);
+			double oldLValue = oldRValue;
 
+			if (FOldLFrequencyDelta != 0)
+				oldLValue = GetValue(FOldRFrequency + FOldLFrequencyDelta, ATime - FTimeOffset);
+
+			//if (!double.IsNaN(FNewRFrequency) && (!IsNote))
 			if (!double.IsNaN(FNewRFrequency))
 			{
 				if (double.IsNaN(FTransitionTimeStart))

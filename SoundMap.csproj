@@ -37,17 +37,17 @@
     <ApplicationIcon>SoundMapIcon.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="CommandLine, Version=2.6.0.0, Culture=neutral, PublicKeyToken=5a870481e358d379, processorArchitecture=MSIL">
+      <HintPath>packages\CommandLineParser.2.6.0\lib\net40\CommandLine.dll</HintPath>
+    </Reference>
     <Reference Include="NAudio, Version=1.9.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>packages\NAudio.1.9.0\lib\net35\NAudio.dll</HintPath>
     </Reference>
     <Reference Include="System" />
-    <Reference Include="System.Data" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
-    <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="System.Xaml">
       <RequiredTargetFramework>4.0</RequiredTargetFramework>
     </Reference>
@@ -63,12 +63,14 @@
     <Compile Include="Controls\SoundPointControl.xaml.cs">
       <DependentUpon>SoundPointControl.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Note.cs" />
     <Compile Include="PointKind.cs" />
     <Compile Include="Settings\WindowSettings.cs" />
     <Compile Include="Controls\SoundControl.cs" />
     <Compile Include="Settings\SoundMapSettings.cs" />
     <Compile Include="SoundPoint.cs" />
     <Compile Include="SoundPointCollection.cs" />
+    <Compile Include="SoundPointValue.cs" />
     <Compile Include="SoundProject.cs" />
     <Page Include="Controls\SoundPointControl.xaml">
       <SubType>Designer</SubType>
@@ -113,6 +115,7 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
+    <Content Include="Default.smp" />
     <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
