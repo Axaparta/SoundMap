@@ -38,6 +38,7 @@
 				<MenuItem Header="Exit" InputGestureText="Esc" Command="{Binding ExitCommand}" />
 			</MenuItem>
 			<MenuItem Header="Sound">
+				<MenuItem Header="Preferences..." Command="{Binding PreferencesCommand}" />
 				<MenuItem Header="Pause" InputGestureText="Pause" IsCheckable="True" IsChecked="{Binding IsPause}" />
 				<MenuItem Header="Device" ItemsSource="{Binding Devices}">
 					<MenuItem.ItemContainerStyle>

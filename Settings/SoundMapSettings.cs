@@ -12,7 +12,7 @@ namespace SoundMap.Settings
 
 		public string DeviceId { get; set; }
 		public WindowSettings MainWindow { get; set; } = new WindowSettings();
-
+		public PreferencesSettings Preferences { get; set; } = new PreferencesSettings();
 
 		[XmlIgnore]
 		public bool IsModify

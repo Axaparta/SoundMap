@@ -1,5 +1,7 @@
 ﻿using NAudio.CoreAudioApi;
 using NAudio.Wave;
+using SoundMap.Settings;
+using SoundMap.Windows;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -43,12 +45,16 @@ namespace SoundMap
 		private RelayCommand FIsPauseCommand = null;
 		private RelayCommand FSetNewPointKindCommand = null;
 		private RelayCommand FSaveSampleCommand = null;
+		private RelayCommand FPreferencesCommand = null;
 
 		private SoundProject FProject = new SoundProject();
 		private bool FIsPause = false;
+		private readonly MainWindow FMainWindow;
 
-		public MainWindowModel()
+		public MainWindowModel(MainWindow AMainWindow)
 		{
+			FMainWindow = AMainWindow;
+
 			using (var e = new MMDeviceEnumerator())
 			{
 				FDefaultDeviceId = e.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia).ID;
@@ -320,6 +326,25 @@ namespace SoundMap
 						}
 					});
 				return FSaveSampleCommand;
+			}
+		}
+
+		public RelayCommand PreferencesCommand
+		{
+			get
+			{
+				if (FPreferencesCommand == null)
+					FPreferencesCommand = new RelayCommand((param) =>
+					{
+						PreferencesWindow wnd = new PreferencesWindow();
+						wnd.Owner = FMainWindow;
+						if (App.Settings.Preferences == null)
+							App.Settings.Preferences = new PreferencesSettings();
+						wnd.DataContext = App.Settings.Preferences.Clone();
+						if (wnd.ShowDialog() == true)
+							App.Settings.Preferences = (PreferencesSettings)wnd.DataContext;
+					});
+				return FPreferencesCommand;
 			}
 		}
 

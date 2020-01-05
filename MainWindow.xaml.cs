@@ -8,7 +8,7 @@ namespace SoundMap
 	{
 		public MainWindow()
 		{
-			DataContext = new MainWindowModel();
+			DataContext = new MainWindowModel(this);
 			InitializeComponent();
 		}
 

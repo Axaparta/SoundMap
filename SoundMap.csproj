@@ -65,6 +65,7 @@
     </Compile>
     <Compile Include="Note.cs" />
     <Compile Include="PointKind.cs" />
+    <Compile Include="Settings\PreferencesSettings.cs" />
     <Compile Include="Settings\WindowSettings.cs" />
     <Compile Include="Controls\SoundControl.cs" />
     <Compile Include="Settings\SoundMapSettings.cs" />
@@ -72,6 +73,9 @@
     <Compile Include="SoundPointCollection.cs" />
     <Compile Include="SoundPointValue.cs" />
     <Compile Include="SoundProject.cs" />
+    <Compile Include="Windows\PreferencesWindow.xaml.cs">
+      <DependentUpon>PreferencesWindow.xaml</DependentUpon>
+    </Compile>
     <Page Include="Controls\SoundPointControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -94,6 +98,10 @@
     <Page Include="Themes\Generic.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Windows\PreferencesWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
     </Page>
   </ItemGroup>
   <ItemGroup>
