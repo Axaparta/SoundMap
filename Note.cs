@@ -24,9 +24,12 @@ namespace SoundMap
 		private double FStartTime = double.NaN;
 		private double FStopTime = double.NaN;
 
-		public Note(SoundPoint[] APoints, WaveFormat AFormat)
+		public object Key { get; }
+
+		public Note(SoundPoint[] APoints, WaveFormat AFormat, object AKey)
 		{
 			Points = APoints;
+			Key = AKey;
 
 			//https://github.com/naudio/NAudio/blob/master/NAudio/Wave/SampleProviders/AdsrSampleProvider.cs
 			FEnvelope = new EnvelopeGenerator();

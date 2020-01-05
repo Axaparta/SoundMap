@@ -21,7 +21,9 @@ namespace SoundMap
 		private double FTime = 0;
 		private double FMinFrequency = 50;
 		private double FMaxFrequency = 2000;
-		private readonly Dictionary<object, Note> FNotes = new Dictionary<object, Note>();
+		private bool FKeyboardMode = false;
+
+		private readonly List<Note> FNotes = new List<Note>();
 		private readonly object FNotesLock = new object();
 
 		[XmlIgnore]
@@ -42,7 +44,17 @@ namespace SoundMap
 		private long FOldStartRead = 0;
 
 		[XmlIgnore]
-		public bool KeyboardMode { get; set; } = false;
+		public bool KeyboardMode
+		{
+			get => FKeyboardMode;
+			set
+			{
+				FKeyboardMode = value;
+				if (!FKeyboardMode)
+					lock (FNotesLock)
+						FNotes.Clear();
+			}
+		}
 
 		public double MinFrequency
 		{
@@ -186,17 +198,18 @@ namespace SoundMap
 			{
 				lock (FNotesLock)
 				{
-					List<object> toDeleteKeys = new List<object>();
+					List<Note> toDeleteNotes = new List<Note>();
 					foreach (var n in FNotes)
-						if (n.Value.Phase == NotePhase.Done)
-							toDeleteKeys.Add(n.Key);
-					foreach (var k in toDeleteKeys)
-						FNotes.Remove(k);
-					notes = FNotes.Values.ToArray();
+					{
+						if (n.Phase == NotePhase.Done)
+							toDeleteNotes.Add(n);
+						else
+							n.UpdatePhase(FTime);
+					}
+					foreach (var n in toDeleteNotes)
+						FNotes.Remove(n);
+					notes = FNotes.ToArray();
 				}
-
-				foreach (var n in notes)
-					n.UpdatePhase(FTime);
 			}
 			else
 				points = Points.ToArray();
@@ -363,8 +376,9 @@ namespace SoundMap
 			}).ToArray();
 
 			lock (FNotesLock)
-				if (!FNotes.ContainsKey(AKey))
-					FNotes.Add(AKey, new Note(a, WaveFormat));
+			{
+				FNotes.Add(new Note(a, WaveFormat, AKey));
+			}
 		}
 
 		public void AddNoteByHalftone(object AKey, int AHalftoneOffset)
@@ -376,8 +390,12 @@ namespace SoundMap
 		public void DeleteNote(object AKey)
 		{
 			lock (FNotesLock)
-				if (FNotes.TryGetValue(AKey, out var n))
-					n.Phase = NotePhase.Stopping;
+				foreach (var n in FNotes)
+					if ((n.Key.Equals(AKey)) && (n.Phase == NotePhase.Playing))
+					{
+						n.Phase = NotePhase.Stopping;
+						break;
+					}
 		}
 	}
 }
