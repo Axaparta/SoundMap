@@ -3,10 +3,26 @@ using NAudio.Wave;
 
 namespace SoundMap
 {
+	public enum NotePhase
+	{
+		None,
+		/// <summary>Фаза после создания ноты. Перед первым заполнением буфера переходит на Playing</summary>
+		Init,
+		/// <summary></summary>
+		Playing,
+		Stopping,
+		Done
+	}
+
 	public class Note
 	{
 		public SoundPoint[] Points { get; }
 		private readonly EnvelopeGenerator FEnvelope;
+		private NotePhase FToSetPhase = NotePhase.Playing;
+		private NotePhase FPhase = NotePhase.Init;
+
+		private double FStartTime = double.NaN;
+		private double FStopTime = double.NaN;
 
 		public Note(SoundPoint[] APoints, WaveFormat AFormat)
 		{
@@ -20,6 +36,32 @@ namespace SoundMap
 			FEnvelope.ReleaseRate = 0.1f * AFormat.SampleRate;
 
 			FEnvelope.Gate(true);
+		}
+
+		public NotePhase Phase
+		{
+			get => FPhase;
+			set => FToSetPhase = value;
+		}
+
+		public void UpdatePhase(double ATime)
+		{
+			switch (FToSetPhase)
+			{
+				case NotePhase.Playing:
+					FToSetPhase = NotePhase.None;
+					FPhase = NotePhase.Playing;
+					FStartTime = ATime;
+					break;
+				case NotePhase.Stopping:
+					FToSetPhase = NotePhase.None;
+					FPhase = NotePhase.Stopping;
+					FStopTime = ATime;
+					break;
+			}
+
+			if ((FPhase == NotePhase.Stopping) && (ATime - FStopTime > 1))
+				FPhase = NotePhase.Done;
 		}
 
 		public SoundPointValue GetValue(double ATime)
@@ -46,7 +88,7 @@ namespace SoundMap
 			if (FEnvelope.State == EnvelopeGenerator.EnvelopeState.Idle)
 				return new SoundPointValue();
 
-			r *= FEnvelope.Process();
+			//r *= FEnvelope.Process();
 
 			return r;
 		}

@@ -22,7 +22,7 @@ namespace SoundMap
 		private double FMinFrequency = 50;
 		private double FMaxFrequency = 2000;
 		private readonly Dictionary<object, Note> FNotes = new Dictionary<object, Note>();
-		private readonly object FPlayLock = new object();
+		private readonly object FNotesLock = new object();
 
 		[XmlIgnore]
 		public WaveFormat WaveFormat { get; private set; }
@@ -179,13 +179,29 @@ namespace SoundMap
 
 			int maxn = offset + count;
 
-			var points = Points.ToArray();
-#if false
-			
-			Note[] buf = null;
-			lock (FPlayLock)
-				buf = FNotes.Values.ToArray();
+			SoundPoint[] points = null;
+			Note[] notes = null;
 
+			if (KeyboardMode)
+			{
+				lock (FNotesLock)
+				{
+					List<object> toDeleteKeys = new List<object>();
+					foreach (var n in FNotes)
+						if (n.Value.Phase == NotePhase.Done)
+							toDeleteKeys.Add(n.Key);
+					foreach (var k in toDeleteKeys)
+						FNotes.Remove(k);
+					notes = FNotes.Values.ToArray();
+				}
+
+				foreach (var n in notes)
+					n.UpdatePhase(FTime);
+			}
+			else
+				points = Points.ToArray();
+
+#if false
 			for (int n = offset; n < maxn; n++)
 			{
 				SoundPointValue op = new SoundPointValue();
@@ -215,9 +231,6 @@ namespace SoundMap
 			}
 #else
 			double startTime = FTime;
-			Note[] buf = null;
-			lock (FPlayLock)
-				buf = FNotes.Values.ToArray();
 
 			switch (WaveFormat.Channels)
 			{
@@ -230,13 +243,13 @@ namespace SoundMap
 						var time = startTime + n / (double)WaveFormat.SampleRate;
 
 						SoundPointValue op = new SoundPointValue();
-						if (KeyboardMode)
-						{
-							for (int i = 0; i < buf.Length; i++)
-								op += buf[i].GetValue(time);
-						}
-						else
+						if (notes == null)
 							op = GetValue(points, time);
+						else
+						{
+							for (int i = 0; i < notes.Length; i++)
+								op += notes[i].GetValue(time);
+						}
 
 						var index = offset + 2 * n;
 						buffer[index] = (float)op.Right;
@@ -349,8 +362,8 @@ namespace SoundMap
 				return p;
 			}).ToArray();
 
-			if (!FNotes.ContainsKey(AKey))
-				lock (FPlayLock)
+			lock (FNotesLock)
+				if (!FNotes.ContainsKey(AKey))
 					FNotes.Add(AKey, new Note(a, WaveFormat));
 		}
 
@@ -362,9 +375,9 @@ namespace SoundMap
 
 		public void DeleteNote(object AKey)
 		{
-			if (FNotes.ContainsKey(AKey))
-				lock (FPlayLock)
-					FNotes.Remove(AKey);
+			lock (FNotesLock)
+				if (FNotes.TryGetValue(AKey, out var n))
+					n.Phase = NotePhase.Stopping;
 		}
 	}
 }

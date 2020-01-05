@@ -53,21 +53,21 @@ namespace SoundMap
 		private void IncludePoint(SoundPoint APoint)
 		{
 			APoint.PropertyChanged += Point_PropertyChanged;
-			APoint.RemoveSelf += Point_RemoveSelf;
+			//APoint.RemoveSelf += Point_RemoveSelf;
 		}
 
-		private void Point_RemoveSelf(SoundPoint obj)
-		{
-			Task.Factory.StartNew(() =>
-			{
-				App.Current.Dispatcher.Invoke(new Action(() => Remove(obj)));
-			});
-		}
+		//private void Point_RemoveSelf(SoundPoint obj)
+		//{
+		//	Task.Factory.StartNew(() =>
+		//	{
+		//		App.Current.Dispatcher.Invoke(new Action(() => Remove(obj)));
+		//	});
+		//}
 
 		private void ExcludePoint(SoundPoint APoint)
 		{
 			APoint.PropertyChanged -= Point_PropertyChanged;
-			APoint.RemoveSelf -= Point_RemoveSelf;
+			//APoint.RemoveSelf -= Point_RemoveSelf;
 		}
 
 		private void Point_PropertyChanged(object sender, PropertyChangedEventArgs e)
