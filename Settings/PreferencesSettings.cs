@@ -9,22 +9,54 @@ namespace SoundMap.Settings
 {
 	public class AudioOutput
 	{
-		private AsioOut FAsioOut;
-		private WasapiOut FWasapiOut;
+		private MMDevice MmDevice { get; }
+		private string AsioName { get; }
+		public string Name { get; }
+
+		public int? SampleRate { get; }
+		public int Channels { get; }
+		public int Latency { get; }
 
 		public AudioOutput(MMDevice AMmDevice)
 		{
-			FWasapiOut = new WasapiOut(AMmDevice, AudioClientShareMode.Exclusive, true, 25);
+			AsioName = null;
+
+			MmDevice = AMmDevice;
+			SampleRate = MmDevice.AudioClient.MixFormat.SampleRate;
+			Channels = MmDevice.AudioClient.MixFormat.Channels;
+			//Latency = (int)MmDevice.AudioClient.StreamLatency;
+			Latency = 25;
 			Name = "WASAPI: " + AMmDevice.FriendlyName;
 		}
 
-		public AudioOutput(AsioOut AAsioOut)
+		public AudioOutput(string AAsioName)
 		{
-			FAsioOut = AAsioOut;
-			Name = "ASIO: " + AAsioOut.DriverName;
+			MmDevice = null;
+			SampleRate = null;
+
+			AsioName = AAsioName;
+
+			using (var ad = new AsioOut(AsioName))
+			{
+				Channels = ad.DriverOutputChannelCount;
+				Latency = ad.PlaybackLatency;
+			}
+
+			Name = "ASIO: " + AAsioName;
 		}
 
-		public string Name { get; set; }
+		public IWavePlayer CreateOutput(PreferencesSettings ASettings)
+		{
+			if (MmDevice != null)
+				return new WasapiOut(MmDevice, AudioClientShareMode.Shared, false, ASettings.Latency);
+
+			if (AsioName != null)
+				return new AsioOut(AsioName);
+
+			throw new NotImplementedException();
+		}
+
+		public bool AllowSampleRateEdit => !SampleRate.HasValue;
 	}
 
 	[Serializable]
@@ -50,7 +82,7 @@ namespace SoundMap.Settings
 
 					if (AsioOut.isSupported())
 						foreach (var n in AsioOut.GetDriverNames())
-							aos.Add(new AudioOutput(new AsioOut(n)));
+							aos.Add(new AudioOutput(n));
 
 					FAudioOutputs = aos.ToArray();
 				}
@@ -74,17 +106,21 @@ namespace SoundMap.Settings
 			}
 		}
 
+		public static int[] SampleRates { get; } = new int[] { 44100, 48000, 96000, 192000 };
+
 		public PreferencesSettings()
 		{ }
 
-		public string AudioOutputName { get; set; }
+		public string SelectedAudioOutputName { get; set; }
+		private int? FLatency = null;
+		private int? FSampleRate = null;
 
 		[XmlIgnore]
-		public AudioOutput AudioOutput
+		public AudioOutput SelectedAudioOutput
 		{
 			get
 			{
-				var r = AudioOutputs.FirstOrDefault(ao => ao.Name == AudioOutputName);
+				var r = AudioOutputs.FirstOrDefault(ao => ao.Name == SelectedAudioOutputName);
 				if (r == null)
 					return DefaultAudioOutput;
 				return r;
@@ -92,11 +128,46 @@ namespace SoundMap.Settings
 			set
 			{
 				if (value == null)
-					AudioOutputName = string.Empty;
+					SelectedAudioOutputName = null;
 				else
-					AudioOutputName = value.Name;
+					SelectedAudioOutputName = value.Name;
 			}
 		}
+
+		public IWavePlayer CreateOutput() => SelectedAudioOutput.CreateOutput(this);
+
+		public int Latency
+		{
+			get
+			{
+				if (FLatency.HasValue)
+					return FLatency.Value;
+				return SelectedAudioOutput.Latency;
+			}
+			set
+			{
+				if (value == 0)
+					FLatency = null;
+				else
+					FLatency = value;
+			}
+		}
+
+		public int SampleRate
+		{
+			get
+			{
+				var sao = SelectedAudioOutput;
+				if (sao.SampleRate.HasValue)
+					return sao.SampleRate.Value;
+				if (FSampleRate.HasValue)
+					return FSampleRate.Value;
+				return SampleRates.First();
+			}
+			set => FSampleRate = value;
+		}
+
+		public int Channels => SelectedAudioOutput.Channels;
 
 		object ICloneable.Clone()
 		{
@@ -106,7 +177,7 @@ namespace SoundMap.Settings
 		public PreferencesSettings Clone()
 		{
 			var r = new PreferencesSettings();
-			r.AudioOutputName = this.AudioOutputName;
+			r.SelectedAudioOutputName = this.SelectedAudioOutputName;
 			return r;
 		}
 	}

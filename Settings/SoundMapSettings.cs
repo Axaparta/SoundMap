@@ -6,13 +6,24 @@ namespace SoundMap.Settings
 	[Serializable]
 	public class SoundMapSettings
 	{
+		private PreferencesSettings FPreferences = new PreferencesSettings();
+
 		public SoundMapSettings()
 		{
 		}
 
-		public string DeviceId { get; set; }
 		public WindowSettings MainWindow { get; set; } = new WindowSettings();
-		public PreferencesSettings Preferences { get; set; } = new PreferencesSettings();
+
+		public PreferencesSettings Preferences
+		{
+			get
+			{
+				if (FPreferences == null)
+					FPreferences = new PreferencesSettings();
+				return FPreferences;
+			}
+			set => FPreferences = value;
+		}
 
 		[XmlIgnore]
 		public bool IsModify

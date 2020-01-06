@@ -30,17 +30,12 @@ namespace SoundMap
 
 	public class MainWindowModel: Observable
 	{
-		private MMDevice[] FDevices = null;
-		private readonly string FDefaultDeviceId = null;
-		private WasapiOut FOut = null;
-
 		private RelayCommand FOpenProjectCommand = null;
 		private RelayCommand FSaveProjectCommand = null;
 		private RelayCommand FSaveProjectAsCommand = null;
 
 		private RelayCommand FExitCommand = null;
 		private RelayCommand FNewProjectCommand = null;
-		private RelayCommand FDeviceMenuItemCommand = null;
 
 		private RelayCommand FIsPauseCommand = null;
 		private RelayCommand FSetNewPointKindCommand = null;
@@ -49,18 +44,12 @@ namespace SoundMap
 
 		private SoundProject FProject = new SoundProject();
 		private bool FIsPause = false;
+		private IWavePlayer FOutput = null;
 		private readonly MainWindow FMainWindow;
 
 		public MainWindowModel(MainWindow AMainWindow)
 		{
 			FMainWindow = AMainWindow;
-
-			using (var e = new MMDeviceEnumerator())
-			{
-				FDefaultDeviceId = e.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia).ID;
-				FDevices = e.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active).ToArray();
-			}
-			StartPlay();
 
 			try
 			{
@@ -71,6 +60,11 @@ namespace SoundMap
 			{
 				App.ShowError(ex.Message);
 			}
+		}
+
+		public void WindowLoaded()
+		{
+			StartPlay();
 		}
 
 		public SoundProject Project
@@ -92,56 +86,33 @@ namespace SoundMap
 
 		private void StartPlay()
 		{
-			var sd = SelectedDevice;
-			if ((FProject != null) && (sd != null))
+			if (FOutput != null)
+				return;
+
+			try
 			{
-				FProject.ConfigureGenerator(sd.AudioClient.MixFormat.SampleRate, sd.AudioClient.MixFormat.Channels);
-				FOut = new WasapiOut(sd, AudioClientShareMode.Shared, true, 25);
-				FOut.Init(FProject);
-				FOut.Play();
+				FOutput = App.Settings.Preferences.CreateOutput();
+				if ((FProject != null) && (FOutput != null))
+				{
+					FProject.ConfigureGenerator(App.Settings.Preferences.SampleRate, App.Settings.Preferences.Channels);
+					FOutput.Init(FProject);
+					FOutput.Play();
+				}
+			}
+			catch (Exception ex)
+			{
+				FOutput = null;
+				App.ShowError(ex.Message);
 			}
 		}
 
 		private void StopPlay()
 		{
-			if (FOut != null)
+			if (FOutput != null)
 			{
-				FOut.Stop();
-				FOut.Dispose();
-				FOut = null;
-			}
-		}
-
-		public DeviceMenuItem[] Devices
-		{
-			get
-			{
-				var r = FDevices.Select(d => new DeviceMenuItem(d, d.ID == SelectedDeviceId)).ToArray();
-				return r;
-			}
-		}
-
-		public string SelectedDeviceId
-		{
-			get
-			{
-				var dev = FDevices.FirstOrDefault(d => d.ID == App.Settings.DeviceId);
-				if (dev == null)
-					return FDefaultDeviceId;
-				return dev.ID;
-			}
-			set
-			{
-				App.Settings.DeviceId = value;
-			}
-		}
-
-		public MMDevice SelectedDevice
-		{
-			get
-			{
-				var dn = SelectedDeviceId;
-				return FDevices.FirstOrDefault(d => d.ID == dn);
+				FOutput.Stop();
+				FOutput.Dispose();
+				FOutput = null;
 			}
 		}
 
@@ -253,27 +224,6 @@ namespace SoundMap
 			}
 		}
 
-		public RelayCommand DeviceMenuItemCommand
-		{
-			get
-			{
-				if (FDeviceMenuItemCommand == null)
-					FDeviceMenuItemCommand = new RelayCommand((obj) =>
-					{
-						if (!IsPause)
-							StopPlay();
-
-						SelectedDeviceId = (obj as DeviceMenuItem).Device.ID;
-						
-						if (!IsPause)
-							StartPlay();
-
-						NotifyPropertyChanged(nameof(Devices));
-					});
-				return FDeviceMenuItemCommand;
-			}
-		}
-
 		public RelayCommand IsPauseCommand
 		{
 			get
@@ -336,13 +286,17 @@ namespace SoundMap
 				if (FPreferencesCommand == null)
 					FPreferencesCommand = new RelayCommand((param) =>
 					{
+						if (!IsPause)
+							StopPlay();
+
 						PreferencesWindow wnd = new PreferencesWindow();
 						wnd.Owner = FMainWindow;
-						if (App.Settings.Preferences == null)
-							App.Settings.Preferences = new PreferencesSettings();
 						wnd.DataContext = App.Settings.Preferences.Clone();
 						if (wnd.ShowDialog() == true)
 							App.Settings.Preferences = (PreferencesSettings)wnd.DataContext;
+
+						if (!IsPause)
+							StartPlay();
 					});
 				return FPreferencesCommand;
 			}

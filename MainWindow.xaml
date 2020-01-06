@@ -40,17 +40,6 @@
 			<MenuItem Header="Sound">
 				<MenuItem Header="Preferences..." Command="{Binding PreferencesCommand}" />
 				<MenuItem Header="Pause" InputGestureText="Pause" IsCheckable="True" IsChecked="{Binding IsPause}" />
-				<MenuItem Header="Device" ItemsSource="{Binding Devices}">
-					<MenuItem.ItemContainerStyle>
-						<Style TargetType="MenuItem">
-							<Setter Property="Header" Value="{Binding Name}" />
-							<Setter Property="IsCheckable" Value="True" />
-							<Setter Property="IsChecked" Value="{Binding Selected}" />
-							<Setter Property="Command" Value="{Binding ElementName=This, Path=DataContext.DeviceMenuItemCommand}" />
-							<Setter Property="CommandParameter" Value="{Binding}" />
-						</Style>
-					</MenuItem.ItemContainerStyle>
-				</MenuItem>
 			</MenuItem>
 		</Menu>
 		<StatusBar DockPanel.Dock="Bottom" IsManipulationEnabled="True">

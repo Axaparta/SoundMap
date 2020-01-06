@@ -214,14 +214,14 @@ namespace SoundMap
 			else
 				points = Points.ToArray();
 
-#if false
+#if !false
 			for (int n = offset; n < maxn; n++)
 			{
 				SoundPointValue op = new SoundPointValue();
 				if (KeyboardMode)
 				{
-					for (int i = 0; i < buf.Length; i++)
-						op += buf[i].GetValue(FTime);
+					for (int i = 0; i < notes.Length; i++)
+						op += notes[i].GetValue(FTime);
 				}
 				else
 					op = GetValue(points, FTime);
@@ -314,6 +314,9 @@ namespace SoundMap
 
 			if (max > 1)
 				r /= max;
+
+			if (Math.Abs(r.Left) > 1)
+				Debug.WriteLine("");
 
 			return r;
 		}

@@ -44,8 +44,18 @@
 			<ComboBox Grid.Row="0" Grid.Column="1"
 								ItemsSource="{x:Static settings:PreferencesSettings.AudioOutputs}"
 								DisplayMemberPath="Name"
-								SelectedItem="{Binding AudioOutput}" />
-			<ContentControl Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" />
+								SelectedItem="{Binding SelectedAudioOutput}" />
+			<!--<ContentControl Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" />-->
+			<UniformGrid Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Columns="4">
+				<Label Style="{StaticResource TitleLabel}" Content="Sample rate" />
+				<ComboBox
+					ItemsSource="{x:Static settings:PreferencesSettings.SampleRates}"
+					SelectedItem="{Binding SampleRate}"/>
+				<Label Style="{StaticResource TitleLabel}" Content="Latency" />
+				<TextBox
+					VerticalAlignment="Center"
+					Text="{Binding Latency, Mode=TwoWay}"/>
+			</UniformGrid>
 
 			<Label Grid.Row="2" Grid.Column="0" Content="MIDI input" Style="{StaticResource TitleLabel}" />
 			<ComboBox Grid.Row="2" Grid.Column="1" />
@@ -54,7 +64,7 @@
 			<StackPanel.Resources>
 				<Style TargetType="Button">
 					<Setter Property="Width" Value="80" />
-					<Setter Property="Height" Value="28" />
+					<Setter Property="Height" Value="26" />
 					<Setter Property="Margin" Value="5,0,0,0" />
 				</Style>
 			</StackPanel.Resources>

@@ -21,6 +21,7 @@ namespace SoundMap
 		private void Window_Loaded(object sender, RoutedEventArgs e)
 		{
 			App.Settings.MainWindow.ApplyTo(this);
+			((MainWindowModel)DataContext).WindowLoaded();
 		}
 
 		private void TextBox_KeyDown(object sender, KeyEventArgs e)
