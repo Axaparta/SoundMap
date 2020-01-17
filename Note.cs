@@ -16,14 +16,13 @@ namespace SoundMap
 
 	public class Note
 	{
-		public SoundPoint[] Points { get; }
-		private readonly EnvelopeGenerator FEnvelope;
+		private readonly Envelope FEnvelope;
 		private NotePhase FToSetPhase = NotePhase.Playing;
 		private NotePhase FPhase = NotePhase.Init;
-
 		private double FStartTime = double.NaN;
 		private double FStopTime = double.NaN;
 
+		public SoundPoint[] Points { get; set; }
 		public object Key { get; }
 
 		public Note(SoundPoint[] APoints, WaveFormat AFormat, object AKey)
@@ -31,14 +30,7 @@ namespace SoundMap
 			Points = APoints;
 			Key = AKey;
 
-			//https://github.com/naudio/NAudio/blob/master/NAudio/Wave/SampleProviders/AdsrSampleProvider.cs
-			FEnvelope = new EnvelopeGenerator();
-			FEnvelope.AttackRate = 0.01f * AFormat.SampleRate;
-			FEnvelope.DecayRate = 0.8f * AFormat.SampleRate;
-			FEnvelope.SustainLevel = 0.0f;
-			FEnvelope.ReleaseRate = 0.1f * AFormat.SampleRate;
-
-			FEnvelope.Gate(true);
+			FEnvelope = Envelope.CreateFast();
 		}
 
 		public NotePhase Phase
@@ -55,21 +47,24 @@ namespace SoundMap
 					FToSetPhase = NotePhase.None;
 					FPhase = NotePhase.Playing;
 					FStartTime = ATime;
+					FEnvelope.Start(ATime);
 					break;
 				case NotePhase.Stopping:
 					FToSetPhase = NotePhase.None;
 					FPhase = NotePhase.Stopping;
 					FStopTime = ATime;
+					FEnvelope.Stop(ATime);
 					break;
 			}
 
-			if ((FPhase == NotePhase.Stopping) && (ATime - FStopTime > 1))
+			if ((FPhase == NotePhase.Stopping) && FEnvelope.IsDone(ATime))
 				FPhase = NotePhase.Done;
 		}
 
 		public SoundPointValue GetValue(double ATime)
 		{
 			double max = 0;
+			var t = ATime - FStartTime;
 			SoundPointValue r = new SoundPointValue();
 			foreach (var p in Points)
 			{
@@ -77,7 +72,7 @@ namespace SoundMap
 					continue;
 
 				max += p.Volume;
-				var v = p.Volume * p.GetValue(ATime);
+				var v = p.Volume * p.GetValue(t);
 
 				if (p.IsSolo)
 					return v;
@@ -88,10 +83,7 @@ namespace SoundMap
 			if (max > 1)
 				r /= max;
 
-			if (FEnvelope.State == EnvelopeGenerator.EnvelopeState.Idle)
-				return new SoundPointValue();
-
-			//r *= FEnvelope.Process();
+			r *= FEnvelope.GetValue(ATime);
 
 			return r;
 		}

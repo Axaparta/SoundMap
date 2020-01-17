@@ -1,9 +1,13 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <SoundProject xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-	<MinFrequency>50</MinFrequency>
-	<MaxFrequency>2000</MaxFrequency>
+	<KeyboardMode>false</KeyboardMode>
+	<NoteSource>Keyboard</NoteSource>
+	<Settings>
+		<MinFrequency>20</MinFrequency>
+		<MaxFrequency>2000</MaxFrequency>
+	</Settings>
 	<Points>
-		<Kind>Static</Kind>
+		<WaveformData>Sine</WaveformData>
 		<IsSolo>false</IsSolo>
 		<IsMute>false</IsMute>
 		<Volume>0.69902157448724767</Volume>
@@ -11,7 +15,7 @@
 		<Frequency>410.51887308895368</Frequency>
 	</Points>
 	<Points>
-		<Kind>Static</Kind>
+		<WaveformData>Sine</WaveformData>
 		<IsSolo>false</IsSolo>
 		<IsMute>false</IsMute>
 		<Volume>0.2200433946043312</Volume>
@@ -19,7 +23,7 @@
 		<Frequency>109.06524316174155</Frequency>
 	</Points>
 	<Points>
-		<Kind>Static</Kind>
+		<WaveformData>Sine</WaveformData>
 		<IsSolo>false</IsSolo>
 		<IsMute>false</IsMute>
 		<Volume>0.28349776886232436</Volume>
@@ -27,7 +31,7 @@
 		<Frequency>231.43440337602769</Frequency>
 	</Points>
 	<Points>
-		<Kind>Static</Kind>
+		<WaveformData>Sine</WaveformData>
 		<IsSolo>false</IsSolo>
 		<IsMute>false</IsMute>
 		<Volume>0.31624841364064349</Volume>
@@ -35,7 +39,7 @@
 		<Frequency>307.32472858217227</Frequency>
 	</Points>
 	<Points>
-		<Kind>Static</Kind>
+		<WaveformData>Sine</WaveformData>
 		<IsSolo>false</IsSolo>
 		<IsMute>false</IsMute>
 		<Volume>0.3837966184959265</Volume>
@@ -43,7 +47,7 @@
 		<Frequency>157.00919215300723</Frequency>
 	</Points>
 	<Points>
-		<Kind>Static</Kind>
+		<WaveformData>Sine</WaveformData>
 		<IsSolo>false</IsSolo>
 		<IsMute>false</IsMute>
 		<Volume>0.17501125803414241</Volume>
@@ -51,7 +55,7 @@
 		<Frequency>219.01722717381173</Frequency>
 	</Points>
 	<Points>
-		<Kind>Static</Kind>
+		<WaveformData>Sine</WaveformData>
 		<IsSolo>false</IsSolo>
 		<IsMute>false</IsMute>
 		<Volume>0.27940393826503451</Volume>
@@ -59,7 +63,7 @@
 		<Frequency>171.89803798260471</Frequency>
 	</Points>
 	<Points>
-		<Kind>Static</Kind>
+		<WaveformData>Sine</WaveformData>
 		<IsSolo>false</IsSolo>
 		<IsMute>false</IsMute>
 		<Volume>0.25893478527858504</Volume>
@@ -67,7 +71,7 @@
 		<Frequency>153.94714367206288</Frequency>
 	</Points>
 	<Points>
-		<Kind>Static</Kind>
+		<WaveformData>Sine</WaveformData>
 		<IsSolo>false</IsSolo>
 		<IsMute>false</IsMute>
 		<Volume>0.23232488639620086</Volume>
@@ -75,7 +79,7 @@
 		<Frequency>144.82914278725897</Frequency>
 	</Points>
 	<Points>
-		<Kind>Static</Kind>
+		<WaveformData>Sine</WaveformData>
 		<IsSolo>false</IsSolo>
 		<IsMute>false</IsMute>
 		<Volume>0.15454210504769306</Volume>
@@ -83,7 +87,7 @@
 		<Frequency>115.70355498891317</Frequency>
 	</Points>
 	<Points>
-		<Kind>Static</Kind>
+		<WaveformData>Sine</WaveformData>
 		<IsSolo>false</IsSolo>
 		<IsMute>false</IsMute>
 		<Volume>0.14021369795717842</Volume>
@@ -91,7 +95,7 @@
 		<Frequency>129.44978442037964</Frequency>
 	</Points>
 	<Points>
-		<Kind>Static</Kind>
+		<WaveformData>Sine</WaveformData>
 		<IsSolo>false</IsSolo>
 		<IsMute>false</IsMute>
 		<Volume>0.1934334957219469</Volume>
@@ -99,7 +103,7 @@
 		<Frequency>343.16010421958094</Frequency>
 	</Points>
 	<Points>
-		<Kind>Static</Kind>
+		<WaveformData>Sine</WaveformData>
 		<IsSolo>false</IsSolo>
 		<IsMute>false</IsMute>
 		<Volume>0.18115200393007724</Volume>
@@ -107,7 +111,7 @@
 		<Frequency>78.650087071501915</Frequency>
 	</Points>
 	<Points>
-		<Kind>Static</Kind>
+		<WaveformData>Sine</WaveformData>
 		<IsSolo>false</IsSolo>
 		<IsMute>false</IsMute>
 		<Volume>0.20776190281246154</Volume>
@@ -115,7 +119,7 @@
 		<Frequency>62.340254792067846</Frequency>
 	</Points>
 	<Points>
-		<Kind>Static</Kind>
+		<WaveformData>Sine</WaveformData>
 		<IsSolo>false</IsSolo>
 		<IsMute>false</IsMute>
 		<Volume>0.34285831252302768</Volume>
@@ -123,7 +127,7 @@
 		<Frequency>56.940690879239185</Frequency>
 	</Points>
 	<Points>
-		<Kind>Static</Kind>
+		<WaveformData>Sine</WaveformData>
 		<IsSolo>false</IsSolo>
 		<IsMute>false</IsMute>
 		<Volume>0.49228312932410856</Volume>
@@ -131,7 +135,7 @@
 		<Frequency>58.532564632330256</Frequency>
 	</Points>
 	<Points>
-		<Kind>Static</Kind>
+		<WaveformData>Sine</WaveformData>
 		<IsSolo>false</IsSolo>
 		<IsMute>false</IsMute>
 		<Volume>0.334670651328448</Volume>
@@ -139,7 +143,7 @@
 		<Frequency>111.01571777785254</Frequency>
 	</Points>
 	<Points>
-		<Kind>Static</Kind>
+		<WaveformData>Sine</WaveformData>
 		<IsSolo>false</IsSolo>
 		<IsMute>false</IsMute>
 		<Volume>0.38584353379457148</Volume>
@@ -147,7 +151,7 @@
 		<Frequency>125.92921915117429</Frequency>
 	</Points>
 	<Points>
-		<Kind>Static</Kind>
+		<WaveformData>Sine</WaveformData>
 		<IsSolo>false</IsSolo>
 		<IsMute>false</IsMute>
 		<Volume>0.37356204200270182</Volume>
@@ -155,7 +159,7 @@
 		<Frequency>182.00189348720656</Frequency>
 	</Points>
 	<Points>
-		<Kind>Static</Kind>
+		<WaveformData>Sine</WaveformData>
 		<IsSolo>false</IsSolo>
 		<IsMute>false</IsMute>
 		<Volume>0.402218856183731</Volume>
@@ -163,7 +167,7 @@
 		<Frequency>211.38885083819568</Frequency>
 	</Points>
 	<SelectedPoint>
-		<Kind>Static</Kind>
+		<WaveformData>Sine</WaveformData>
 		<IsSolo>false</IsSolo>
 		<IsMute>false</IsMute>
 		<Volume>0.402218856183731</Volume>

@@ -7,113 +7,55 @@ using System.Xml.Serialization;
 
 namespace SoundMap.Settings
 {
-	public class AudioOutput
-	{
-		private MMDevice MmDevice { get; }
-		private string AsioName { get; }
-		public string Name { get; }
-
-		public int? SampleRate { get; }
-		public int Channels { get; }
-		public int Latency { get; }
-
-		public AudioOutput(MMDevice AMmDevice)
-		{
-			AsioName = null;
-
-			MmDevice = AMmDevice;
-			SampleRate = MmDevice.AudioClient.MixFormat.SampleRate;
-			Channels = MmDevice.AudioClient.MixFormat.Channels;
-			//Latency = (int)MmDevice.AudioClient.StreamLatency;
-			Latency = 25;
-			Name = "WASAPI: " + AMmDevice.FriendlyName;
-		}
-
-		public AudioOutput(string AAsioName)
-		{
-			MmDevice = null;
-			SampleRate = null;
-
-			AsioName = AAsioName;
-
-			using (var ad = new AsioOut(AsioName))
-			{
-				Channels = ad.DriverOutputChannelCount;
-				Latency = ad.PlaybackLatency;
-			}
-
-			Name = "ASIO: " + AAsioName;
-		}
-
-		public IWavePlayer CreateOutput(PreferencesSettings ASettings)
-		{
-			if (MmDevice != null)
-				return new WasapiOut(MmDevice, AudioClientShareMode.Shared, false, ASettings.Latency);
-
-			if (AsioName != null)
-				return new AsioOut(AsioName);
-
-			throw new NotImplementedException();
-		}
-
-		public bool AllowSampleRateEdit => !SampleRate.HasValue;
-	}
-
 	[Serializable]
-	public class PreferencesSettings: ICloneable
+	public class PreferencesSettings: Observable, ICloneable
 	{
 		private static AudioOutput[] FAudioOutputs = null;
 		private static AudioOutput FDefaultAudioOutput = null;
 
-		public static AudioOutput[] AudioOutputs
-		{
-			get
-			{
-				if (FAudioOutputs == null)
-				{
-					List<AudioOutput> aos = new List<AudioOutput>();
+		[XmlIgnore]
+		public AudioOutput[] AudioOutputs => FAudioOutputs;
 
-					using (var e = new MMDeviceEnumerator())
-					{
-						//FDefaultDeviceId = e.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia).ID;
-						foreach (MMDevice d in e.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active))
-							aos.Add(new AudioOutput(d));
-					}
-
-					if (AsioOut.isSupported())
-						foreach (var n in AsioOut.GetDriverNames())
-							aos.Add(new AudioOutput(n));
-
-					FAudioOutputs = aos.ToArray();
-				}
-
-				return FAudioOutputs;
-			}
-		}
-
-		public static AudioOutput DefaultAudioOutput
-		{
-			get
-			{
-				if (FDefaultAudioOutput == null)
-				{
-					using (var e = new MMDeviceEnumerator())
-					{
-						FDefaultAudioOutput = new AudioOutput(e.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia));
-					}
-				}
-				return FDefaultAudioOutput;
-			}
-		}
-
-		public static int[] SampleRates { get; } = new int[] { 44100, 48000, 96000, 192000 };
+		[XmlIgnore]
+		public AudioOutput DefaultAudioOutput => FDefaultAudioOutput;
 
 		public PreferencesSettings()
-		{ }
+		{
+			if (FAudioOutputs == null)
+				InitAudio();
+		}
+
+		private void InitAudio()
+		{
+			List<AudioOutput> aos = new List<AudioOutput>();
+
+			FDefaultAudioOutput = null;
+			using (var e = new MMDeviceEnumerator())
+			{
+				string defaultId = e.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia).ID;
+
+				foreach (MMDevice d in e.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active))
+				{
+					var ao = new AudioOutput(d);
+					if (d.ID == defaultId)
+						FDefaultAudioOutput = ao;
+					aos.Add(ao);
+				}
+			}
+
+			if (AsioOut.isSupported())
+				foreach (var n in AsioOut.GetDriverNames())
+					aos.Add(new AudioOutput(n));
+
+			FAudioOutputs = aos.ToArray();
+			if (FDefaultAudioOutput == null)
+				FDefaultAudioOutput = FAudioOutputs.First();
+		}
 
 		public string SelectedAudioOutputName { get; set; }
 		private int? FLatency = null;
 		private int? FSampleRate = null;
+		private string FChannel = null;
 
 		[XmlIgnore]
 		public AudioOutput SelectedAudioOutput
@@ -131,6 +73,10 @@ namespace SoundMap.Settings
 					SelectedAudioOutputName = null;
 				else
 					SelectedAudioOutputName = value.Name;
+				NotifyPropertyChanged(nameof(SampleRate));
+				NotifyPropertyChanged(nameof(Channel));
+				NotifyPropertyChanged(nameof(Latency));
+				NotifyPropertyChanged(nameof(SelectedAudioOutput));
 			}
 		}
 
@@ -142,32 +88,45 @@ namespace SoundMap.Settings
 			{
 				if (FLatency.HasValue)
 					return FLatency.Value;
-				return SelectedAudioOutput.Latency;
+				return SelectedAudioOutput.DefaultLatency;
 			}
 			set
 			{
 				if (value == 0)
-					FLatency = null;
+					FLatency = SelectedAudioOutput.DefaultLatency;
 				else
 					FLatency = value;
 			}
 		}
+
+		public int Channels => 2;
 
 		public int SampleRate
 		{
 			get
 			{
 				var sao = SelectedAudioOutput;
-				if (sao.SampleRate.HasValue)
-					return sao.SampleRate.Value;
 				if (FSampleRate.HasValue)
-					return FSampleRate.Value;
-				return SampleRates.First();
+				{ 
+					if (sao.SampleRates.Contains(FSampleRate.Value))
+						return FSampleRate.Value;
+				}
+				return sao.SampleRates.First();
 			}
 			set => FSampleRate = value;
 		}
 
-		public int Channels => SelectedAudioOutput.Channels;
+		public string Channel
+		{
+			get
+			{
+				var ao = SelectedAudioOutput;
+				if (ao.Channels.Contains(FChannel))
+					return FChannel;
+				return ao.Channels.First();
+			}
+			set => FChannel = value;
+		}
 
 		object ICloneable.Clone()
 		{
@@ -178,6 +137,9 @@ namespace SoundMap.Settings
 		{
 			var r = new PreferencesSettings();
 			r.SelectedAudioOutputName = this.SelectedAudioOutputName;
+			r.FLatency = this.FLatency;
+			r.FSampleRate = this.FSampleRate;
+			r.FChannel = this.FChannel;
 			return r;
 		}
 	}

@@ -93,6 +93,7 @@ namespace SoundMap.Controls
 		private Point FDownPoint;
 		private HVStatus FHVControl = HVStatus.Off;
 		private readonly Pen FHVPen;
+		private readonly Typeface FTypeface;
 		private Rect FSelectedRect = Rect.Empty;
 
 		public SoundControl()
@@ -104,6 +105,8 @@ namespace SoundMap.Controls
 			FHVPen = new Pen(SystemColors.ControlDarkBrush, 1);
 			FHVPen.DashStyle = new DashStyle(new double[] { 1, 3 }, 0);
 			FHVPen.Freeze();
+
+			FTypeface = new Typeface("Consolas");
 		}
 
 		#region Properties
@@ -170,6 +173,7 @@ namespace SoundMap.Controls
 			FRenderPoints.Clear();
 
 			if (Project != null)
+			{
 				foreach (var p in Project.Points)
 				{
 					var c = GetPointXY(p);
@@ -186,6 +190,13 @@ namespace SoundMap.Controls
 					rp.DrawTo(drawingContext);
 					FRenderPoints.Add(rp);
 				}
+
+				FormattedText ft = new FormattedText(Project.Settings.MinFrequency.ToString(), CultureInfo.InvariantCulture, FlowDirection.LeftToRight, FTypeface, 12, Foreground);
+				drawingContext.DrawText(ft, new Point(0, ActualHeight - ft.Height));
+
+				ft = new FormattedText(Project.Settings.MaxFrequency.ToString() + " Hz", CultureInfo.InvariantCulture, FlowDirection.LeftToRight, FTypeface, 12, Foreground);
+				drawingContext.DrawText(ft, new Point(ActualWidth - ft.Width, ActualHeight - ft.Height));
+			}
 
 			drawingContext.DrawRectangle(null, FHVPen, FSelectedRect);
 		}
@@ -448,8 +459,8 @@ namespace SoundMap.Controls
 
 		public Point GetPointXY(SoundPoint APoint)
 		{
-			double FLogFMin = Math.Log(Project.MinFrequency, 2);
-			double FLogFMax = Math.Log(Project.MaxFrequency, 2);
+			double FLogFMin = Math.Log(Project.Settings.MinFrequency, 2);
+			double FLogFMax = Math.Log(Project.Settings.MaxFrequency, 2);
 			double pow = Math.Log(APoint.Frequency, 2);
 			double rx = (pow - FLogFMin) / (FLogFMax - FLogFMin);
 
@@ -469,8 +480,8 @@ namespace SoundMap.Controls
 
 		private double GetFrequency(Point APoint)
 		{
-			double FLogFMin = Math.Log(Project.MinFrequency, 2);
-			double FLogFMax = Math.Log(Project.MaxFrequency, 2);
+			double FLogFMin = Math.Log(Project.Settings.MinFrequency, 2);
+			double FLogFMax = Math.Log(Project.Settings.MaxFrequency, 2);
 			var pow = FLogFMin + (FLogFMax - FLogFMin) * APoint.X / ActualWidth;
 			return Math.Pow(2, pow);
 		}

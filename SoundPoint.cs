@@ -16,16 +16,11 @@ namespace SoundMap
 
 		private bool FIsSolo = false;
 		private bool FIsMute = false;
-		private PointKind FKind = PointKind.Static;
+		private Waveform FWaveform = null;
 		private double FLFrequencyDelta = 0;
 
 		private double FVolume = 0;
 		private double FRFrequency = 0;
-
-		//public event Action<SoundPoint> RemoveSelf;
-
-		//public static PointKind[] PointKinds { get; } = Enum.GetValues(typeof(PointKind)).Cast<PointKind>().ToArray();
-		public static KeyValuePair<PointKind, string>[] PointKinds { get; } = Enum.GetValues(typeof(PointKind)).Cast<PointKind>().Select(p => new KeyValuePair<PointKind, string>(p, p.ToString())).ToArray();
 
 		/// <summary>True, когда являвется частью ноты. Необходима для оптимизации</summary>
 		[XmlIgnore]
@@ -48,17 +43,29 @@ namespace SoundMap
 		public SoundPoint()
 		{ }
 
-		public PointKind Kind
+		[XmlIgnore]
+		public Waveform Waveform
 		{
-			get => FKind;
-			set
+			get
 			{
-				if (FKind != value)
-				{
-					FKind = value;
-					NotifyPropertyChanged(nameof(Kind));
-				}
+				if (FWaveform == null)
+					FWaveform = Waveform.DefaultWaveform;
+				return FWaveform;
 			}
+			set => FWaveform = value;
+		}
+
+		[XmlIgnore]
+		public string WaveformName
+		{
+			get => Waveform.Name;
+			set => FWaveform = Waveform.BuildinWaveForms.First(wf => wf.Name == value);
+		}
+
+		public string WaveformData
+		{
+			get => Waveform.SerializeToString();
+			set => FWaveform = Waveform.CreateFromString(value);
 		}
 
 		public bool IsSolo
@@ -144,6 +151,8 @@ namespace SoundMap
 		{
 			return Frequency.ToString("F2");
 		}
+
+		public string AsString => ToString();
 
 		private double GetValue(double AFrequency, double ATime)
 		{

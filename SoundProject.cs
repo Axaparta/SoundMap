@@ -1,4 +1,5 @@
 ﻿using NAudio.Wave;
+using SoundMap.Settings;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -19,12 +20,14 @@ namespace SoundMap
 		public static readonly string FileFilter = "SoundMap project (*.smp)|*.smp";
 
 		private double FTime = 0;
-		private double FMinFrequency = 50;
-		private double FMaxFrequency = 2000;
-		private bool FKeyboardMode = false;
+		private ProjectSettings FSettings = new ProjectSettings();
+		private NoteSourceEnum FNoteSource = NoteSourceEnum.None;
+		private RelayCommand FNotePanicCommand = null;
 
 		private readonly List<Note> FNotes = new List<Note>();
 		private readonly object FNotesLock = new object();
+		private Note FContinueOneNote = null;
+		private string FStatus;
 
 		[XmlIgnore]
 		public WaveFormat WaveFormat { get; private set; }
@@ -43,48 +46,39 @@ namespace SoundMap
 		private readonly Stopwatch FDebugStopwatch = new Stopwatch();
 		private long FOldStartRead = 0;
 
-		[XmlIgnore]
-		public bool KeyboardMode
+		public NoteSourceEnum NoteSource
 		{
-			get => FKeyboardMode;
+			get => FNoteSource;
 			set
 			{
-				FKeyboardMode = value;
-				if (!FKeyboardMode)
-					lock (FNotesLock)
-						FNotes.Clear();
-			}
-		}
-
-		public double MinFrequency
-		{
-			get => FMinFrequency;
-			set
-			{
-				if (FMinFrequency != value)
+				if (FNoteSource != value)
 				{
-					FMinFrequency = value;
-					NotifyPropertyChanged(nameof(MinFrequency));
-				}
-			}
-		}
-		public double MaxFrequency
-		{
-			get => FMaxFrequency;
-			set
-			{
-				if (FMaxFrequency != value)
-				{
-					FMaxFrequency = value;
-					NotifyPropertyChanged(nameof(MaxFrequency));
+					FNoteSource = value;
+					NotifyPropertyChanged(nameof(NoteSource));
 				}
 			}
 		}
 
-		//Подумать как передавать эти числа точке
+		public void NotePanic()
+		{
+			lock (FNotesLock)
+				FNotes.Clear();
+		}
 
-		[XmlIgnore]
-		public PointKind NewPointKind { get; set; } = PointKind.Static;
+		public ProjectSettings Settings
+		{
+			get
+			{
+				if (FSettings == null)
+					FSettings = new ProjectSettings();
+				return FSettings;
+			}
+			set
+			{
+				FSettings = value;
+				NotifyPropertyChanged(nameof(Settings));
+			}
+		}
 
 		private SoundPointEvent FSoundControlAddPointAction = null;
 		private SoundPoint FSelectedPoint = null;
@@ -172,6 +166,7 @@ namespace SoundMap
 		public void ConfigureGenerator(int ASampleRate, int AChannels)
 		{
 			WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(ASampleRate, AChannels);
+			FContinueOneNote = new Note(null, WaveFormat, null);
 			FTime = 0;
 		}
 
@@ -191,40 +186,49 @@ namespace SoundMap
 
 			int maxn = offset + count;
 
-			SoundPoint[] points = null;
 			Note[] notes = null;
 
-			if (KeyboardMode)
+			switch (FNoteSource)
 			{
-				lock (FNotesLock)
-				{
-					List<Note> toDeleteNotes = new List<Note>();
-					foreach (var n in FNotes)
+				//case NoteSourceEnum.None:
+				//case NoteSourceEnum.MIDI:
+				//	notes = new Note[0];
+				//	break;
+				case NoteSourceEnum.ContinueOne:
+					FContinueOneNote.Points = Points.ToArray();
+					notes = new Note[] { FContinueOneNote };
+					break;
+				case NoteSourceEnum.Keyboard:
+					lock (FNotesLock)
 					{
-						if (n.Phase == NotePhase.Done)
-							toDeleteNotes.Add(n);
-						else
-							n.UpdatePhase(FTime);
+						List<Note> toDeleteNotes = new List<Note>();
+						foreach (var n in FNotes)
+							if (n.Phase == NotePhase.Done)
+								toDeleteNotes.Add(n);
+						foreach (var n in toDeleteNotes)
+							FNotes.Remove(n);
+						notes = FNotes.ToArray();
 					}
-					foreach (var n in toDeleteNotes)
-						FNotes.Remove(n);
-					notes = FNotes.ToArray();
-				}
+					break;
 			}
-			else
-				points = Points.ToArray();
 
-#if !false
+			if (notes == null)
+				return count;
+
+			foreach (var n in notes)
+				n.UpdatePhase(FTime);
+
+#if false
 			for (int n = offset; n < maxn; n++)
 			{
 				SoundPointValue op = new SoundPointValue();
-				if (KeyboardMode)
+				if (notes == null)
+					op = GetValue(points, FTime);
+				else
 				{
 					for (int i = 0; i < notes.Length; i++)
 						op += notes[i].GetValue(FTime);
 				}
-				else
-					op = GetValue(points, FTime);
 
 				switch (WaveFormat.Channels)
 				{
@@ -247,27 +251,19 @@ namespace SoundMap
 
 			switch (WaveFormat.Channels)
 			{
-				//case 1:
-				//	buffer[n] = (float)op.Right;
-				//	break;
 				case 2:
 					Parallel.For(0, count/2, (n) =>
 					{
 						var time = startTime + n / (double)WaveFormat.SampleRate;
 
 						SoundPointValue op = new SoundPointValue();
-						if (notes == null)
-							op = GetValue(points, time);
-						else
-						{
-							for (int i = 0; i < notes.Length; i++)
-								op += notes[i].GetValue(time);
-						}
+
+						for (int i = 0; i < notes.Length; i++)
+							op += notes[i].GetValue(time);
 
 						var index = offset + 2 * n;
 						buffer[index] = (float)op.Right;
-						index++;
-						buffer[index] = (float)op.Left;
+						buffer[index + 1] = (float)op.Left;
 					});
 
 					FTime += (count / 2) / (double)WaveFormat.SampleRate;
@@ -290,6 +286,8 @@ namespace SoundMap
 				Debug.WriteLine($"Start {startRead}, end {endRead}, D: {endRead - startRead}, Count: {count}, CTime (msec): {bufferTime}, (Saple/Sec): {WaveFormat.SampleRate}");
 			}
 
+			Interlocked.Exchange(ref FStatus, $"Load: {100*(endRead - startRead)/ bufferTime, 3}% ({bufferTime})");
+
 			FOldStartRead = startRead;
 			return count;
 		}
@@ -298,6 +296,9 @@ namespace SoundMap
 		{
 			double max = 0;
 			SoundPointValue r = new SoundPointValue();
+
+#if true
+
 			foreach (var p in APoints)
 			{
 				if (p.IsMute)
@@ -315,6 +316,13 @@ namespace SoundMap
 			if (max > 1)
 				r /= max;
 
+#else
+
+			r.Left = Math.Sin(2 * 3.14 * 440 * ATime);
+			r.Right = r.Left;
+
+#endif
+
 			if (Math.Abs(r.Left) > 1)
 				Debug.WriteLine("");
 
@@ -328,7 +336,7 @@ namespace SoundMap
 				if (FSoundControlAddPointAction == null)
 					FSoundControlAddPointAction = new SoundPointEvent((sp) =>
 					{
-						sp.Kind = NewPointKind;
+						//sp.Kind = NewPointKind;
 						Points.Add(sp);
 					});
 				return FSoundControlAddPointAction;
@@ -399,6 +407,24 @@ namespace SoundMap
 						n.Phase = NotePhase.Stopping;
 						break;
 					}
+		}
+
+		public string Status
+		{
+			get
+			{
+				return FStatus;
+			}
+		}
+
+		public RelayCommand NotePanicCommand
+		{
+			get
+			{
+				if (FNotePanicCommand == null)
+					FNotePanicCommand = new RelayCommand((obj) => NotePanic());
+				return FNotePanicCommand;
+			}
 		}
 	}
 }

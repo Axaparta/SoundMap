@@ -63,9 +63,13 @@
     <Compile Include="Controls\SoundPointControl.xaml.cs">
       <DependentUpon>SoundPointControl.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Envelope.cs" />
     <Compile Include="Note.cs" />
-    <Compile Include="PointKind.cs" />
+    <Compile Include="NoteSouceToBoolConverter.cs" />
+    <Compile Include="NoteSourceEnum.cs" />
+    <Compile Include="Settings\AudioOutput.cs" />
     <Compile Include="Settings\PreferencesSettings.cs" />
+    <Compile Include="Settings\ProjectSettings.cs" />
     <Compile Include="Settings\WindowSettings.cs" />
     <Compile Include="Controls\SoundControl.cs" />
     <Compile Include="Settings\SoundMapSettings.cs" />
@@ -73,14 +77,18 @@
     <Compile Include="SoundPointCollection.cs" />
     <Compile Include="SoundPointValue.cs" />
     <Compile Include="SoundProject.cs" />
+    <Compile Include="Waveform.cs" />
     <Compile Include="Windows\PreferencesWindow.xaml.cs">
       <DependentUpon>PreferencesWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Windows\ProjectSettingsWindow.xaml.cs">
+      <DependentUpon>ProjectSettingsWindow.xaml</DependentUpon>
     </Compile>
     <Page Include="Controls\SoundPointControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="MainWindow.xaml">
+    <Page Include="Windows\MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
@@ -91,7 +99,7 @@
     <Compile Include="Common\Observable.cs" />
     <Compile Include="Common\RelayCommand.cs" />
     <Compile Include="Common\XmlHelper.cs" />
-    <Compile Include="MainWindow.xaml.cs">
+    <Compile Include="Windows\MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
@@ -100,6 +108,10 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="Windows\PreferencesWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Windows\ProjectSettingsWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

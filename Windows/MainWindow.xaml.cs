@@ -2,7 +2,7 @@
 using System.Windows.Controls;
 using System.Windows.Input;
 
-namespace SoundMap
+namespace SoundMap.Windows
 {
 	public partial class MainWindow : Window
 	{

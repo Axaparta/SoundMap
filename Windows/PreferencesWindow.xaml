@@ -41,16 +41,21 @@
 			</Grid.Resources>
 
 			<Label Content="Audio output" Style="{StaticResource TitleLabel}" />
-			<ComboBox Grid.Row="0" Grid.Column="1"
-								ItemsSource="{x:Static settings:PreferencesSettings.AudioOutputs}"
-								DisplayMemberPath="Name"
-								SelectedItem="{Binding SelectedAudioOutput}" />
-			<!--<ContentControl Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" />-->
-			<UniformGrid Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Columns="4">
+			<ComboBox
+				Grid.Row="0" Grid.Column="1"
+				ItemsSource="{Binding AudioOutputs}"
+				DisplayMemberPath="Name"
+				SelectedItem="{Binding SelectedAudioOutput}" />
+
+			<UniformGrid Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Columns="6">
 				<Label Style="{StaticResource TitleLabel}" Content="Sample rate" />
 				<ComboBox
-					ItemsSource="{x:Static settings:PreferencesSettings.SampleRates}"
+					ItemsSource="{Binding SelectedAudioOutput.SampleRates}"
 					SelectedItem="{Binding SampleRate}"/>
+				<Label Style="{StaticResource TitleLabel}" Content="Channels" />
+				<ComboBox
+					ItemsSource="{Binding SelectedAudioOutput.Channels}"
+					SelectedItem="{Binding Channel}"/>
 				<Label Style="{StaticResource TitleLabel}" Content="Latency" />
 				<TextBox
 					VerticalAlignment="Center"

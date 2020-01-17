@@ -1,33 +1,20 @@
 ﻿using NAudio.CoreAudioApi;
 using NAudio.Wave;
+using NAudio.Wave.SampleProviders;
 using SoundMap.Settings;
 using SoundMap.Windows;
 using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
+using System.Threading;
 using System.Windows.Forms;
 using System.Windows.Input;
+using System.Windows.Threading;
 
 namespace SoundMap
 {
-
-	#region class DeviceMenuItem
-	public class DeviceMenuItem
-	{
-		public string Name => Device.FriendlyName;
-		public MMDevice Device { get; }
-
-		public bool Selected { get; set; }
-
-		public DeviceMenuItem(MMDevice ADevice, bool ASelected)
-		{
-			Device = ADevice;
-			Selected = ASelected;
-		}
-	}
-	#endregion
-
 	public class MainWindowModel: Observable
 	{
 		private RelayCommand FOpenProjectCommand = null;
@@ -41,11 +28,13 @@ namespace SoundMap
 		private RelayCommand FSetNewPointKindCommand = null;
 		private RelayCommand FSaveSampleCommand = null;
 		private RelayCommand FPreferencesCommand = null;
+		private RelayCommand FProjectPropertiesCommand = null;
 
 		private SoundProject FProject = new SoundProject();
 		private bool FIsPause = false;
 		private IWavePlayer FOutput = null;
 		private readonly MainWindow FMainWindow;
+		private readonly DispatcherTimer FStatusTimer;
 
 		public MainWindowModel(MainWindow AMainWindow)
 		{
@@ -60,11 +49,17 @@ namespace SoundMap
 			{
 				App.ShowError(ex.Message);
 			}
+
+			FStatusTimer = new DispatcherTimer();
+			FStatusTimer.Interval = TimeSpan.FromMilliseconds(100);
+			FStatusTimer.Tick += StatusTimer_Tick;
+			
 		}
 
 		public void WindowLoaded()
 		{
 			StartPlay();
+			FStatusTimer.Start();
 		}
 
 		public SoundProject Project
@@ -75,7 +70,7 @@ namespace SoundMap
 				if (!IsPause)
 					StopPlay();
 
-				FProject = value;
+				Interlocked.Exchange(ref FProject, value);
 
 				if (!IsPause)
 					StartPlay();
@@ -94,8 +89,13 @@ namespace SoundMap
 				FOutput = App.Settings.Preferences.CreateOutput();
 				if ((FProject != null) && (FOutput != null))
 				{
+					FProject.NotePanic();
 					FProject.ConfigureGenerator(App.Settings.Preferences.SampleRate, App.Settings.Preferences.Channels);
 					FOutput.Init(FProject);
+					//var sg = new SignalGenerator(App.Settings.Preferences.SampleRate, App.Settings.Preferences.Channels);
+					//sg.Frequency = 220;
+					//sg.Type = SignalGeneratorType.Sin;
+					//FOutput.Init(sg);
 					FOutput.Play();
 				}
 			}
@@ -110,6 +110,7 @@ namespace SoundMap
 		{
 			if (FOutput != null)
 			{
+				FProject?.NotePanic();
 				FOutput.Stop();
 				FOutput.Dispose();
 				FOutput = null;
@@ -241,7 +242,7 @@ namespace SoundMap
 				if (FSetNewPointKindCommand == null)
 					FSetNewPointKindCommand = new RelayCommand((obj) =>
 					{
-						Project.NewPointKind = (PointKind)obj;
+						//Project.NewPointKind = (PointKind)obj;
 					});
 				return FSetNewPointKindCommand;
 			}
@@ -302,6 +303,23 @@ namespace SoundMap
 			}
 		}
 
+		public RelayCommand ProjectPropertiesCommand
+		{
+			get
+			{
+				if (FProjectPropertiesCommand == null)
+					FProjectPropertiesCommand = new RelayCommand((param) =>
+					{
+						ProjectSettingsWindow wnd = new ProjectSettingsWindow();
+						wnd.Owner = FMainWindow;
+						wnd.DataContext = FProject.Settings.Clone();
+						if (wnd.ShowDialog() == true)
+							FProject.Settings = (ProjectSettings)wnd.DataContext;
+					});
+				return FProjectPropertiesCommand;
+			}
+		}
+
 		public void KeyDown(Key AKey)
 		{
 			switch (AKey)
@@ -358,6 +376,21 @@ namespace SoundMap
 			}
 
 			Project.DeleteNote(AKey);
+		}
+
+		public string Status
+		{
+			get
+			{
+				if (FOutput != null)
+					return $"Playing; {FProject.WaveFormat.SampleRate}, {FProject.WaveFormat.Channels}; {FProject.Status}";
+				return "Stopped;";
+			}
+		}
+
+		private void StatusTimer_Tick(object sender, EventArgs e)
+		{
+			NotifyPropertyChanged(nameof(Status));
 		}
 	}
 }
