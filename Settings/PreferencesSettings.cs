@@ -76,6 +76,7 @@ namespace SoundMap.Settings
 				NotifyPropertyChanged(nameof(SampleRate));
 				NotifyPropertyChanged(nameof(Channel));
 				NotifyPropertyChanged(nameof(Latency));
+				NotifyPropertyChanged(nameof(LatencyEnabled));
 				NotifyPropertyChanged(nameof(SelectedAudioOutput));
 			}
 		}
@@ -97,6 +98,11 @@ namespace SoundMap.Settings
 				else
 					FLatency = value;
 			}
+		}
+
+		public bool LatencyEnabled
+		{
+			get => SelectedAudioOutput.LatencyEnbled;
 		}
 
 		public int Channels => 2;

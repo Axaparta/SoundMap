@@ -20,7 +20,7 @@ namespace SoundMap
 		private double FLFrequencyDelta = 0;
 
 		private double FVolume = 0;
-		private double FRFrequency = 0;
+		private double FFrequency = 0;
 
 		/// <summary>True, когда являвется частью ноты. Необходима для оптимизации</summary>
 		[XmlIgnore]
@@ -52,20 +52,36 @@ namespace SoundMap
 					FWaveform = Waveform.DefaultWaveform;
 				return FWaveform;
 			}
-			set => FWaveform = value;
+			set
+			{
+				if (FWaveform != null)
+				{
+					value.Frequency = FWaveform.Frequency;
+					value.Init(FWaveform.SampleRate);
+				}
+				FWaveform = value;
+			}
 		}
 
 		[XmlIgnore]
 		public string WaveformName
 		{
 			get => Waveform.Name;
-			set => FWaveform = Waveform.BuildinWaveForms.First(wf => wf.Name == value);
+			set
+			{
+				Waveform = Waveform.BuildinWaveForms.First(wf => wf.Name == value).Clone();
+			}
 		}
 
 		public string WaveformData
 		{
 			get => Waveform.SerializeToString();
-			set => FWaveform = Waveform.CreateFromString(value);
+			set
+			{
+				FWaveform = Waveform.CreateFromString(value);
+				if (FWaveform != null)
+					FWaveform.Frequency = Frequency;
+			}
 		}
 
 		public bool IsSolo
@@ -105,7 +121,9 @@ namespace SoundMap
 
 		public SoundPoint Clone()
 		{
-			return (SoundPoint)MemberwiseClone();
+			var p = (SoundPoint)MemberwiseClone();
+			p.Waveform = this.Waveform.Clone();
+			return p;
 		}
 
 		public double Volume
@@ -136,12 +154,13 @@ namespace SoundMap
 
 		public double Frequency
 		{
-			get => FRFrequency;
+			get => FFrequency;
 			set
 			{
-				if (FRFrequency != value)
+				//if (FFrequency != value)
 				{
-					FRFrequency = value;
+					FFrequency = value;
+					Waveform.Frequency = Frequency;
 					NotifyPropertyChanged(nameof(Frequency));
 				}
 			}
@@ -154,25 +173,20 @@ namespace SoundMap
 
 		public string AsString => ToString();
 
-		private double GetValue(double AFrequency, double ATime)
-		{
-			return Math.Sin(AFrequency * ATime * Math.PI * 2);
-		}
+		//private double GetValue(double AFrequency, double ATime)
+		//{
+		//	return Math.Sin(AFrequency * ATime * Math.PI * 2);
+		//}
 
 		public SoundPointValue GetValue(double ATime)
 		{
-			var rv = GetValue(FRFrequency, ATime);
+			var rv = Waveform.GetValue(ATime);
 			double lv = rv;
 
-			if (FLFrequencyDelta != 0)
-				lv = GetValue(FRFrequency + FLFrequencyDelta, ATime);
+			//if (FLFrequencyDelta != 0)
+			//	lv = GetValue(FFrequency + FLFrequencyDelta, ATime);
 
 			return new SoundPointValue(lv, rv);
 		}
-
-		//private void DoRemoveSelf()
-		//{
-		//	RemoveSelf?.Invoke(this);
-		//}
 	}
 }

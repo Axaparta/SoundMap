@@ -1,4 +1,6 @@
-﻿using System.Windows;
+﻿using SoundMap.Models;
+using System.ComponentModel;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 
@@ -10,6 +12,12 @@ namespace SoundMap.Windows
 		{
 			DataContext = new MainWindowModel(this);
 			InitializeComponent();
+		}
+
+		protected override void OnClosing(CancelEventArgs e)
+		{
+			((MainWindowModel)DataContext).WindowClosing(e);
+			base.OnClosing(e);
 		}
 
 		private void Window_Closed(object sender, System.EventArgs e)
@@ -32,13 +40,23 @@ namespace SoundMap.Windows
 
 		private void This_KeyDown(object sender, KeyEventArgs e)
 		{
+			if (Keyboard.FocusedElement is TextBox)
+				return;
+
 			if (!e.IsRepeat)
-				((MainWindowModel)DataContext).KeyDown(e.Key);
+			{
+				((MainWindowModel)DataContext).KeyDown(e);
+				e.Handled = true;
+			}
 		}
 
 		private void This_KeyUp(object sender, KeyEventArgs e)
 		{
-			((MainWindowModel)DataContext).KeyUp(e.Key);
+			if (Keyboard.FocusedElement is TextBox)
+				return;
+
+			((MainWindowModel)DataContext).KeyUp(e);
+			e.Handled = true;
 		}
 	}
 }

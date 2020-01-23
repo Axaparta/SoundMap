@@ -2,9 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Globalization;
-using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -14,6 +12,9 @@ namespace SoundMap.Controls
 {
 	public class SoundControl : Control
 	{
+		private static readonly double LogVolMin = Math.Log(1, 2);
+		private static readonly double LogVolMax = Math.Log(0.001, 2);
+
 		#region class RenderPoint
 		private class RenderPoint
 		{
@@ -54,14 +55,14 @@ namespace SoundMap.Controls
 
 				if (Link.IsMute)
 				{
-					FormattedText t = new FormattedText("M", CultureInfo.InvariantCulture, FlowDirection.LeftToRight, tf, 12, MuteTextBrush);
+					FormattedText t = new FormattedText("M", CultureInfo.InvariantCulture, FlowDirection.LeftToRight, tf, 12, MuteTextBrush, SoundControl.PixelsPerDip);
 					drawingContext.DrawText(t, stp);
 					stp.X += t.Width;
 				}
 
 				if (Link.IsSolo)
 				{
-					FormattedText t = new FormattedText("S", CultureInfo.InvariantCulture, FlowDirection.LeftToRight, tf, 12, SoloTextBrush);
+					FormattedText t = new FormattedText("S", CultureInfo.InvariantCulture, FlowDirection.LeftToRight, tf, 12, SoloTextBrush, SoundControl.PixelsPerDip);
 					drawingContext.DrawText(t, stp);
 				}
 			}
@@ -95,6 +96,7 @@ namespace SoundMap.Controls
 		private readonly Pen FHVPen;
 		private readonly Typeface FTypeface;
 		private Rect FSelectedRect = Rect.Empty;
+		public static double PixelsPerDip { get; private set; }
 
 		public SoundControl()
 		{
@@ -107,6 +109,7 @@ namespace SoundMap.Controls
 			FHVPen.Freeze();
 
 			FTypeface = new Typeface("Consolas");
+			PixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
 		}
 
 		#region Properties
@@ -191,10 +194,10 @@ namespace SoundMap.Controls
 					FRenderPoints.Add(rp);
 				}
 
-				FormattedText ft = new FormattedText(Project.Settings.MinFrequency.ToString(), CultureInfo.InvariantCulture, FlowDirection.LeftToRight, FTypeface, 12, Foreground);
+				FormattedText ft = new FormattedText(Project.Settings.MinFrequency.ToString(), CultureInfo.InvariantCulture, FlowDirection.LeftToRight, FTypeface, 12, Foreground, PixelsPerDip);
 				drawingContext.DrawText(ft, new Point(0, ActualHeight - ft.Height));
 
-				ft = new FormattedText(Project.Settings.MaxFrequency.ToString() + " Hz", CultureInfo.InvariantCulture, FlowDirection.LeftToRight, FTypeface, 12, Foreground);
+				ft = new FormattedText(Project.Settings.MaxFrequency.ToString() + " Hz", CultureInfo.InvariantCulture, FlowDirection.LeftToRight, FTypeface, 12, Foreground, PixelsPerDip);
 				drawingContext.DrawText(ft, new Point(ActualWidth - ft.Width, ActualHeight - ft.Height));
 			}
 
@@ -233,17 +236,16 @@ namespace SoundMap.Controls
 			{
 				if (toDelete == null)
 				{
-					var newPoint = new SoundPoint()
-					{
-						Frequency = GetFrequency(p),
-						Volume = GetVolume(p)
-					};
+					var newPoint = Project.CreateDefaultPoint(GetFrequency(p), GetVolume(p));
 					Project.Points.Add(newPoint);
 					foreach (var pts in Project.Points)
 						pts.IsSelected = pts == newPoint;
 				}
 				else
+				{
 					Project.Points.Remove(toDelete.Link);
+					Project.SelectedPoint = null;
+				}
 			}
 			finally
 			{
@@ -429,16 +431,16 @@ namespace SoundMap.Controls
 				case Key.Down:
 					Offset(0, +1);
 					break;
-				case Key.S:
-					if (Project.SelectedPoints.Count == 1)
-						Project.SelectedPoints[0].IsSolo = !Project.SelectedPoints[0].IsSolo;
-					e.Handled = true;
-					break;
-				case Key.M:
-					for (int i = 0; i < Project.SelectedPoints.Count; i++)
-						Project.SelectedPoints[i].IsMute = !Project.SelectedPoints[i].IsMute;
-					e.Handled = true;
-					break;
+				//case Key.S:
+				//	if (Project.SelectedPoints.Count == 1)
+				//		Project.SelectedPoints[0].IsSolo = !Project.SelectedPoints[0].IsSolo;
+				//	e.Handled = true;
+				//	break;
+				//case Key.M:
+				//	for (int i = 0; i < Project.SelectedPoints.Count; i++)
+				//		Project.SelectedPoints[i].IsMute = !Project.SelectedPoints[i].IsMute;
+				//	e.Handled = true;
+				//	break;
 			}
 
 			Project.Points.ChangedUnlock();
@@ -464,7 +466,11 @@ namespace SoundMap.Controls
 			double pow = Math.Log(APoint.Frequency, 2);
 			double rx = (pow - FLogFMin) / (FLogFMax - FLogFMin);
 
-			var p = new Point(ActualWidth * rx, ActualHeight * (1 - APoint.Volume));
+			var volPow = Math.Log(APoint.Volume, 2);
+			double ry = (volPow - LogVolMin) / (LogVolMax - LogVolMin);
+			//double ry = 1 - APoint.Volume;
+
+			var p = new Point(ActualWidth * rx, ActualHeight * ry);
 
 			if (p.X < 0)
 				p.X = 0;
@@ -480,15 +486,17 @@ namespace SoundMap.Controls
 
 		private double GetFrequency(Point APoint)
 		{
-			double FLogFMin = Math.Log(Project.Settings.MinFrequency, 2);
-			double FLogFMax = Math.Log(Project.Settings.MaxFrequency, 2);
-			var pow = FLogFMin + (FLogFMax - FLogFMin) * APoint.X / ActualWidth;
-			return Math.Pow(2, pow);
+			double logFrqMin = Math.Log(Project.Settings.MinFrequency, 2);
+			double logFrqMax = Math.Log(Project.Settings.MaxFrequency, 2);
+			var frqPow = logFrqMin + (logFrqMax - logFrqMin) * APoint.X / ActualWidth;
+			return Math.Pow(2, frqPow);
 		}
 
 		private double GetVolume(Point APoint)
 		{
-			return 1 - APoint.Y / ActualHeight;
+			var volPow = LogVolMin + (LogVolMax - LogVolMin) * APoint.Y / ActualHeight;
+			return Math.Pow(2, volPow);
+			//return 1 - APoint.Y / ActualHeight;
 		}
 
 		private void SoundPointOffset(SoundPoint APoint, SoundPoint AStartPoint, Vector AOffset)

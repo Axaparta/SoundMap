@@ -5,5 +5,10 @@
 	xmlns:local="clr-namespace:SoundMap"
 	StartupUri="Windows\MainWindow.xaml">
 	<Application.Resources>
+		<ResourceDictionary>
+			<ResourceDictionary.MergedDictionaries>
+				<ResourceDictionary Source="Themes\BaseStyles.xaml" />
+			</ResourceDictionary.MergedDictionaries>
+		</ResourceDictionary>
 	</Application.Resources>
 </Application>

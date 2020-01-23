@@ -1,9 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Reflection;
+using System.Xml.Serialization;
 
 namespace SoundMap
 {
 	[Serializable]
-	public class Envelope: ICloneable
+	public class AdsrEnvelope: ICloneable
 	{
 		private const double Epsilon = 0.01;
 		private const double EpsilonPlus = 1 + Epsilon;
@@ -19,16 +23,19 @@ namespace SoundMap
 
 		private double FReleaseK;
 		private double FReleaseTime;
+		private double FReleaseMultipler = 1;
 
 		private double FStartTime = double.NaN;
 		private double FStopTime = double.NaN;
 		private double FStopValue;
 
-		public Envelope()
+		private static Dictionary<string, AdsrEnvelope> FEnvelopes = null;
+
+		public AdsrEnvelope()
 		{
 		}
 
-		public Envelope(double AAttacTime, double ADecayTime, double ASustainLevel, double AReleaseTime)
+		public AdsrEnvelope(double AAttacTime, double ADecayTime, double ASustainLevel, double AReleaseTime)
 		{
 			AttacTime = AAttacTime;
 			DecayTime = ADecayTime;
@@ -36,11 +43,29 @@ namespace SoundMap
 			ReleaseTime = AReleaseTime;
 		}
 
-		public static Envelope CreateSlowPiano() => new Envelope(0.1, 0.2, 0.8, 3);
-		public static Envelope CreatePiano() => new Envelope(0.005, 5, 0, 0.1);
-		public static Envelope CreateClavisin() => new Envelope(0.005, 10, 0, 0) { AttacMultipler = 4, DecayMultipler = 2 };
-		public static Envelope CreateTube() => new Envelope(1, 0, 1, 0.5);
-		public static Envelope CreateFast() => new Envelope(0.005, 0, 1, 0.005);
+		public static AdsrEnvelope Fast { get; } = new AdsrEnvelope(0.005, 0, 1, 0.005).Clone();
+		public static AdsrEnvelope SlowPiano { get; } = new AdsrEnvelope(0.1, 0.2, 0.8, 3).Clone();
+		public static AdsrEnvelope Piano { get; } = new AdsrEnvelope(0.005, 5, 0, 0.1).Clone();
+		public static AdsrEnvelope Clavisin { get; } = new AdsrEnvelope(0.005, 10, 0, 0) { AttacMultipler = 4, DecayMultipler = 2 }.Clone();
+		public static AdsrEnvelope Tube { get; } = new AdsrEnvelope(1, 0, 1, 2).Clone();
+
+		[XmlIgnore]
+		public Dictionary<string, AdsrEnvelope> Envelopes
+		{
+			get
+			{
+				if (FEnvelopes == null)
+				{
+					FEnvelopes = new Dictionary<string, AdsrEnvelope>();
+					var t = typeof(AdsrEnvelope);
+					var props = t.GetProperties(BindingFlags.Public | BindingFlags.Static);
+					foreach (var p in props)
+						if (p.PropertyType.Equals(t) && !p.PropertyType.IsArray)
+							FEnvelopes[p.Name] = ((AdsrEnvelope)p.GetValue(null, null));
+				}
+				return FEnvelopes;
+			}
+		}
 
 		public void Start(double ATime)
 		{
@@ -151,6 +176,18 @@ namespace SoundMap
 			set;
 		}
 
+		public double ReleaseMultipler
+		{
+			get => FReleaseMultipler;
+			set
+			{
+				FReleaseMultipler = value;
+				UpdateReleaseK();
+			}
+		}
+
+		public void UpdateReleaseK() => FReleaseK = FReleaseMultipler * GetK(FReleaseTime);
+
 		/// <summary>
 		/// ReleaseTime == 0 - ignore Stop, decay only
 		/// </summary>
@@ -160,7 +197,7 @@ namespace SoundMap
 			set
 			{
 				FReleaseTime = value;
-				FReleaseK = GetK(value);
+				UpdateReleaseK();
 			}
 		}
 
@@ -171,9 +208,9 @@ namespace SoundMap
 			return Clone();
 		}
 
-		public Envelope Clone()
+		public AdsrEnvelope Clone()
 		{
-			var r = (Envelope)MemberwiseClone();
+			var r = (AdsrEnvelope)MemberwiseClone();
 			r.SustainLevel = this.SustainLevel;
 			return r;
 		}

@@ -21,13 +21,17 @@ namespace SoundMap
 
 		private double FTime = 0;
 		private ProjectSettings FSettings = new ProjectSettings();
-		private NoteSourceEnum FNoteSource = NoteSourceEnum.None;
+		private NoteSourceEnum FNoteSource = NoteSourceEnum.ContinueOne;
 		private RelayCommand FNotePanicCommand = null;
+
+		private WaveFileWriter FFileWriter = null;
+		private readonly object FFileWriterLock = new object();
 
 		private readonly List<Note> FNotes = new List<Note>();
 		private readonly object FNotesLock = new object();
 		private Note FContinueOneNote = null;
 		private string FStatus;
+		private AdsrEnvelope FEnvelope = null;
 
 		[XmlIgnore]
 		public WaveFormat WaveFormat { get; private set; }
@@ -45,6 +49,7 @@ namespace SoundMap
 		public bool DebugMode { get; set; } = false;
 		private readonly Stopwatch FDebugStopwatch = new Stopwatch();
 		private long FOldStartRead = 0;
+		private bool FIsModify = false;
 
 		public NoteSourceEnum NoteSource
 		{
@@ -54,6 +59,8 @@ namespace SoundMap
 				if (FNoteSource != value)
 				{
 					FNoteSource = value;
+					IsModify = true;
+					NotePanic();
 					NotifyPropertyChanged(nameof(NoteSource));
 				}
 			}
@@ -76,12 +83,27 @@ namespace SoundMap
 			set
 			{
 				FSettings = value;
+				IsModify = true;
 				NotifyPropertyChanged(nameof(Settings));
 			}
 		}
 
 		private SoundPointEvent FSoundControlAddPointAction = null;
 		private SoundPoint FSelectedPoint = null;
+
+		public bool IsModify
+		{
+			get => FIsModify;
+			set
+			{
+				if (FIsModify != value)
+				{
+					FIsModify = value;
+					NotifyPropertyChanged(nameof(IsModify));
+					NotifyPropertyChanged(nameof(Title));
+				}
+			}
+		}
 
 		public SoundProject()
 		{
@@ -96,6 +118,7 @@ namespace SoundMap
 		{
 			var r = XmlHelper.Load<SoundProject>(AFileName);
 			r.FileName = AFileName;
+			r.IsModify = false;
 			return r;
 		}
 
@@ -116,7 +139,7 @@ namespace SoundMap
 
 		private void Points_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
 		{
-
+			IsModify = true;
 		}
 
 		private void Points_PointPropertyChanged(object sender, PropertyChangedEventArgs e)
@@ -150,6 +173,7 @@ namespace SoundMap
 				SelectedPoint = null;
 		}
 
+		[XmlIgnore]
 		public SoundPoint SelectedPoint
 		{
 			get => FSelectedPoint;
@@ -163,11 +187,43 @@ namespace SoundMap
 			}
 		}
 
-		public void ConfigureGenerator(int ASampleRate, int AChannels)
+		public AdsrEnvelope Envelope
+		{
+			get
+			{
+				if (FEnvelope == null)
+					FEnvelope = AdsrEnvelope.Fast;
+				return FEnvelope;
+			}
+			set
+			{
+				IsModify = true;
+				if (value != null)
+					FEnvelope = value.Clone();
+				else
+					FEnvelope = null;
+				NotifyPropertyChanged(nameof(Envelope));
+			}
+		}
+
+		public void InitGenerator(int ASampleRate, int AChannels)
 		{
 			WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(ASampleRate, AChannels);
-			FContinueOneNote = new Note(null, WaveFormat, null);
+			FContinueOneNote = new Note(null, WaveFormat, null, AdsrEnvelope.Fast);
 			FTime = 0;
+			foreach (var p in Points)
+				p.Waveform.Init(ASampleRate);
+		}
+
+		public SoundPoint CreateDefaultPoint(double AFrequency, double AVolume)
+		{
+			SoundPoint p = new SoundPoint()
+			{
+				Frequency = AFrequency,
+				Volume = AVolume
+			};
+			p.Waveform.Init(WaveFormat.SampleRate);
+			return p;
 		}
 
 		public string Title
@@ -176,7 +232,8 @@ namespace SoundMap
 			{
 				if (string.IsNullOrEmpty(FileName))
 					return App.AppName;
-				return $"{App.AppName} [{Path.GetFileNameWithoutExtension(FileName)}]";
+				var m = (FIsModify) ? "*" : string.Empty;
+				return $"{App.AppName} [{Path.GetFileNameWithoutExtension(FileName)}{m}]";
 			}
 		}
 
@@ -190,10 +247,6 @@ namespace SoundMap
 
 			switch (FNoteSource)
 			{
-				//case NoteSourceEnum.None:
-				//case NoteSourceEnum.MIDI:
-				//	notes = new Note[0];
-				//	break;
 				case NoteSourceEnum.ContinueOne:
 					FContinueOneNote.Points = Points.ToArray();
 					notes = new Note[] { FContinueOneNote };
@@ -211,12 +264,6 @@ namespace SoundMap
 					}
 					break;
 			}
-
-			if (notes == null)
-				return count;
-
-			foreach (var n in notes)
-				n.UpdatePhase(FTime);
 
 #if false
 			for (int n = offset; n < maxn; n++)
@@ -249,27 +296,37 @@ namespace SoundMap
 #else
 			double startTime = FTime;
 
-			switch (WaveFormat.Channels)
+			if (notes == null)
 			{
-				case 2:
-					Parallel.For(0, count/2, (n) =>
-					{
-						var time = startTime + n / (double)WaveFormat.SampleRate;
+				for (int n = offset; n < maxn; n++)
+					buffer[n] = 0;
+			}
+			else
+			{
+				foreach (var n in notes)
+					n.UpdatePhase(FTime);
+				switch (WaveFormat.Channels)
+				{
+					case 2:
+						Parallel.For(0, count / 2, (n) =>
+							{
+								var time = startTime + n / (double)WaveFormat.SampleRate;
 
-						SoundPointValue op = new SoundPointValue();
+								SoundPointValue op = new SoundPointValue();
 
-						for (int i = 0; i < notes.Length; i++)
-							op += notes[i].GetValue(time);
+								for (int i = 0; i < notes.Length; i++)
+									op += notes[i].GetValue(time);
 
-						var index = offset + 2 * n;
-						buffer[index] = (float)op.Right;
-						buffer[index + 1] = (float)op.Left;
-					});
+								var index = offset + 2 * n;
+								buffer[index] = (float)op.Right;
+								buffer[index + 1] = (float)op.Left;
+							});
 
-					FTime += (count / 2) / (double)WaveFormat.SampleRate;
-					break;
-				default:
-					throw new NotSupportedException($"Channels count: " + WaveFormat.Channels);
+						FTime += (count / 2) / (double)WaveFormat.SampleRate;
+						break;
+					default:
+						throw new NotSupportedException($"Channels count: " + WaveFormat.Channels);
+				}
 			}
 #endif
 
@@ -286,48 +343,46 @@ namespace SoundMap
 				Debug.WriteLine($"Start {startRead}, end {endRead}, D: {endRead - startRead}, Count: {count}, CTime (msec): {bufferTime}, (Saple/Sec): {WaveFormat.SampleRate}");
 			}
 
-			Interlocked.Exchange(ref FStatus, $"Load: {100*(endRead - startRead)/ bufferTime, 3}% ({bufferTime})");
+			lock (FFileWriterLock)
+			{
+				string rs = string.Empty;
+				if (FFileWriter != null)
+				{
+					FFileWriter.WriteSamples(buffer, offset, count);
+					rs = " Recording...";
+				}
+
+				Interlocked.Exchange(ref FStatus, $"Load: {100 * (endRead - startRead) / bufferTime,3}% ({bufferTime}){rs}");
+			}
 
 			FOldStartRead = startRead;
 			return count;
 		}
 
-		public SoundPointValue GetValue(SoundPoint[] APoints, double ATime)
-		{
-			double max = 0;
-			SoundPointValue r = new SoundPointValue();
+		//public SoundPointValue GetValue(SoundPoint[] APoints, double ATime)
+		//{
+		//	double max = 0;
+		//	SoundPointValue r = new SoundPointValue();
 
-#if true
+		//	foreach (var p in APoints)
+		//	{
+		//		if (p.IsMute)
+		//			continue;
 
-			foreach (var p in APoints)
-			{
-				if (p.IsMute)
-					continue;
+		//		max += p.Volume;
+		//		var v = p.Volume * p.GetValue(ATime);
 
-				max += p.Volume;
-				var v = p.Volume * p.GetValue(ATime);
+		//		if (p.IsSolo)
+		//			return v;
 
-				if (p.IsSolo)
-					return v;
+		//		r += v;
+		//	}
 
-				r += v;
-			}
+		//	if (max > 1)
+		//		r /= max;
 
-			if (max > 1)
-				r /= max;
-
-#else
-
-			r.Left = Math.Sin(2 * 3.14 * 440 * ATime);
-			r.Right = r.Left;
-
-#endif
-
-			if (Math.Abs(r.Left) > 1)
-				Debug.WriteLine("");
-
-			return r;
-		}
+		//	return r;
+		//}
 
 		public SoundPointEvent SoundControlAddPointAction
 		{
@@ -338,6 +393,7 @@ namespace SoundMap
 					{
 						//sp.Kind = NewPointKind;
 						Points.Add(sp);
+						IsModify = true;
 					});
 				return FSoundControlAddPointAction;
 			}
@@ -349,26 +405,8 @@ namespace SoundMap
 			{
 				XmlHelper.Save(this, AFileName);
 				FileName = AFileName;
+				IsModify = false;
 				NotifyPropertyChanged(nameof(Title));
-			}
-			catch (Exception ex)
-			{
-				App.ShowError(ex.Message);
-			}
-		}
-
-		public void SaveSampleToFile(string AFileName)
-		{
-
-			try
-			{
-				using (WaveFileWriter writer = new WaveFileWriter(AFileName, WaveFormat))
-				{
-					float[] buf = new float[WaveFormat.AverageBytesPerSecond];
-					int offset = 0;
-					var rb = Read(buf, offset, buf.Length);
-					writer.WriteSamples(buf, offset, rb);
-				}
 			}
 			catch (Exception ex)
 			{
@@ -378,6 +416,9 @@ namespace SoundMap
 
 		public void AddNote(object AKey, double AMultipler)
 		{
+			if ((NoteSource == NoteSourceEnum.ContinueOne) || (NoteSource == NoteSourceEnum.None))
+				return;
+
 			var a = Points.Select(p =>
 			{
 				p = p.Clone();
@@ -388,7 +429,7 @@ namespace SoundMap
 
 			lock (FNotesLock)
 			{
-				FNotes.Add(new Note(a, WaveFormat, AKey));
+				FNotes.Add(new Note(a, WaveFormat, AKey, Envelope.Clone()));
 			}
 		}
 
@@ -398,15 +439,16 @@ namespace SoundMap
 			AddNote(AKey, v);
 		}
 
-		public void DeleteNote(object AKey)
+		public bool DeleteNote(object AKey)
 		{
 			lock (FNotesLock)
 				foreach (var n in FNotes)
 					if ((n.Key.Equals(AKey)) && (n.Phase == NotePhase.Playing))
 					{
 						n.Phase = NotePhase.Stopping;
-						break;
+						return true;
 					}
+			return false;
 		}
 
 		public string Status
@@ -424,6 +466,29 @@ namespace SoundMap
 				if (FNotePanicCommand == null)
 					FNotePanicCommand = new RelayCommand((obj) => NotePanic());
 				return FNotePanicCommand;
+			}
+		}
+
+		public void StartRecord(string AFileName)
+		{
+			if (FFileWriter != null)
+				return;
+			lock (FFileWriterLock)
+			{
+				FFileWriter = new WaveFileWriter(AFileName, WaveFormat);
+			}
+		}
+
+		public void StopRecord()
+		{
+			lock (FFileWriterLock)
+			{
+				if (FFileWriter != null)
+				{
+					FFileWriter.Close();
+					FFileWriter.Dispose();
+					FFileWriter = null;
+				}
 			}
 		}
 	}

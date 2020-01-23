@@ -11,27 +11,6 @@
 	d:DesignHeight="350" d:DesignWidth="150">
 	<Grid Margin="5,5,5,0">
 		<Grid.Resources>
-			<Style x:Key="BaseStyle" TargetType="Control">
-				<Setter Property="VerticalAlignment" Value="Center" />
-				<Setter Property="Foreground">
-					<Setter.Value>
-						<Binding ElementName="This" Path="Foreground" />
-					</Setter.Value>
-				</Setter>
-			</Style>
-			<Style x:Key="LeftBaseStyle" TargetType="Control" BasedOn="{StaticResource BaseStyle}">
-				<Setter Property="Margin" Value="0,0,3,5" />
-				<Setter Property="HorizontalAlignment" Value="Right" />
-			</Style>
-			<Style x:Key="RightBaseStyle" TargetType="Control" BasedOn="{StaticResource BaseStyle}">
-				<Setter Property="Margin" Value="0,0,0,5" />
-				<Setter Property="HorizontalAlignment" Value="Stretch" />
-			</Style>
-			
-			<Style x:Key="HeaderLabel" TargetType="Label" BasedOn="{StaticResource LeftBaseStyle}">
-				<Setter Property="Padding" Value="0" />
-			</Style>
-
 			<Style TargetType="CheckBox" BasedOn="{StaticResource RightBaseStyle}">
 				<Setter Property="Height" Value="20" />
 				<Setter Property="VerticalContentAlignment" Value="Center" />
@@ -88,6 +67,7 @@
 			SelectedValuePath="Name"
 			SelectedValue="{Binding ElementName=This, Path=Point.WaveformName}"
 			DisplayMemberPath="Name"
+			IsEnabled="{Binding ElementName=This, Path=IsPointEnabled}"
 			ItemsSource="{x:Static local:Waveform.BuildinWaveForms}" />
 
 		<Label
@@ -98,6 +78,7 @@
 		<TextBox
 			Grid.Row="4"
 			Grid.Column="1"
+			IsEnabled="{Binding ElementName=This, Path=IsPointEnabled}"
 			Style="{StaticResource RightBaseStyle}"
 			Text="{Binding Mode=TwoWay, ElementName=This, Path=Point.LeftFrequencyDelta}" />
 	</Grid>

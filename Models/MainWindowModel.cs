@@ -1,40 +1,46 @@
-﻿using NAudio.CoreAudioApi;
+﻿using CommandLine;
 using NAudio.Wave;
-using NAudio.Wave.SampleProviders;
 using SoundMap.Settings;
 using SoundMap.Windows;
 using System;
+using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 using System.Windows.Input;
 using System.Windows.Threading;
 
-namespace SoundMap
+namespace SoundMap.Models
 {
 	public class MainWindowModel: Observable
 	{
 		private RelayCommand FOpenProjectCommand = null;
 		private RelayCommand FSaveProjectCommand = null;
 		private RelayCommand FSaveProjectAsCommand = null;
+		private RelayCommand FRecentFileCommand = null;
 
 		private RelayCommand FExitCommand = null;
 		private RelayCommand FNewProjectCommand = null;
 
 		private RelayCommand FIsPauseCommand = null;
 		private RelayCommand FSetNewPointKindCommand = null;
-		private RelayCommand FSaveSampleCommand = null;
 		private RelayCommand FPreferencesCommand = null;
 		private RelayCommand FProjectPropertiesCommand = null;
+
+		private RelayCommand FStartRecordCommand = null;
+		private RelayCommand FStopRecordCommand = null;
 
 		private SoundProject FProject = new SoundProject();
 		private bool FIsPause = false;
 		private IWavePlayer FOutput = null;
 		private readonly MainWindow FMainWindow;
 		private readonly DispatcherTimer FStatusTimer;
+		private readonly List<Key> FPressedKeys = new List<Key>();
+
+		public AppSettings SettingsProxy => App.Settings;
 
 		public MainWindowModel(MainWindow AMainWindow)
 		{
@@ -42,8 +48,15 @@ namespace SoundMap
 
 			try
 			{
-				if (App.Args.Length == 1)
-					Project = SoundProject.CreateFromFile(App.Args[0]);
+				Parser.Default.ParseArguments<AppCommandLine>(App.Args)
+				 .WithParsed<AppCommandLine>(cl =>
+				 {
+						if (File.Exists(cl.FileName))
+							Project = SoundProject.CreateFromFile(App.Args[0]);
+						else
+							if (cl.Last && App.Settings.HasFileHistory)
+								Project = SoundProject.CreateFromFile(App.Settings.FileHistory.First());
+				 });
 			}
 			catch (Exception ex)
 			{
@@ -90,7 +103,7 @@ namespace SoundMap
 				if ((FProject != null) && (FOutput != null))
 				{
 					FProject.NotePanic();
-					FProject.ConfigureGenerator(App.Settings.Preferences.SampleRate, App.Settings.Preferences.Channels);
+					FProject.InitGenerator(App.Settings.Preferences.SampleRate, App.Settings.Preferences.Channels);
 					FOutput.Init(FProject);
 					//var sg = new SignalGenerator(App.Settings.Preferences.SampleRate, App.Settings.Preferences.Channels);
 					//sg.Frequency = 220;
@@ -134,6 +147,22 @@ namespace SoundMap
 			}
 		}
 
+		public void WindowClosing(CancelEventArgs e)
+		{
+			if (Project.IsModify)
+				switch (MessageBox.Show("Project has been changed. Save?", "Question", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question, MessageBoxDefaultButton.Button1))
+				{
+					case DialogResult.Yes:
+						SaveProjectCommand.Execute(null);
+						break;
+					case DialogResult.Cancel:
+						e.Cancel = true;
+						break;
+					case DialogResult.No:
+						break;
+				}
+		}
+
 		public void WindowClose()
 		{
 			StopPlay();
@@ -161,7 +190,10 @@ namespace SoundMap
 							OpenFileDialog dlg = new OpenFileDialog();
 							dlg.Filter = SoundProject.FileFilter;
 							if (dlg.ShowDialog() == DialogResult.OK)
+							{
 								Project = SoundProject.CreateFromFile(dlg.FileName);
+								App.Settings.AddHistory(dlg.FileName);
+							}
 						}
 						catch (Exception ex)
 						{
@@ -205,10 +237,42 @@ namespace SoundMap
 							dlg.Filter = SoundProject.FileFilter;
 							dlg.FilterIndex = 1;
 							if (dlg.ShowDialog() == DialogResult.OK)
-								Project.SaveToFile(dlg.FileName);
+							{
+								try
+								{
+									Project.SaveToFile(dlg.FileName);
+									App.Settings.AddHistory(dlg.FileName);
+								}
+								catch (Exception ex)
+								{
+									App.ShowError(ex.Message);
+								}
+							}
 						}
 					});
 				return FSaveProjectAsCommand;
+			}
+		}
+
+		public RelayCommand RecentFileCommand
+		{
+			get
+			{
+				if (FRecentFileCommand == null)
+					FRecentFileCommand = new RelayCommand((obj) =>
+					{
+						try
+						{
+							var fn = (string)obj;
+							Project = SoundProject.CreateFromFile(fn);
+							App.Settings.AddHistory(fn);
+						}
+						catch (Exception ex)
+						{
+							App.ShowError(ex.Message);
+						}
+					});
+				return FRecentFileCommand;
 			}
 		}
 
@@ -245,38 +309,6 @@ namespace SoundMap
 						//Project.NewPointKind = (PointKind)obj;
 					});
 				return FSetNewPointKindCommand;
-			}
-		}
-
-		public RelayCommand SaveSampleCommand
-		{
-			get
-			{
-				if (FSaveSampleCommand == null)
-					FSaveSampleCommand = new RelayCommand((obj) =>
-					{
-						using (SaveFileDialog dlg = new SaveFileDialog())
-						{
-							if (!string.IsNullOrEmpty(Project.FileName))
-							{
-								dlg.InitialDirectory = Path.GetFullPath(Project.FileName);
-								dlg.FileName = Path.GetFileName(Project.FileName);
-							}
-							dlg.Filter = "Wave file (*.wav)|*.wav";
-							dlg.FilterIndex = 1;
-							if (dlg.ShowDialog() == DialogResult.OK)
-							{
-								if (!IsPause)
-									StopPlay();
-
-								Project.SaveSampleToFile(dlg.FileName);
-
-								if (!IsPause)
-									StartPlay();
-							}
-						}
-					});
-				return FSaveSampleCommand;
 			}
 		}
 
@@ -320,62 +352,84 @@ namespace SoundMap
 			}
 		}
 
-		public void KeyDown(Key AKey)
+		public void KeyDown(System.Windows.Input.KeyEventArgs AKey)
 		{
-			switch (AKey)
+			if (FPressedKeys.IndexOf(AKey.Key) != -1)
+				return;
+
+			FPressedKeys.Add(AKey.Key);
+			AKey.Handled = true;
+			switch (AKey.Key)
 			{
 				case Key.F1:
 					Project.DebugMode = true;
 					break;
-
 				case Key.Z:
-					Project.AddNoteByHalftone(AKey, -7);
+					Project.AddNoteByHalftone(AKey.Key, -7);
+					break;
+				case Key.S: // 2
+					Project.AddNoteByHalftone(AKey.Key, -6);
 					break;
 				case Key.X:
-					Project.AddNoteByHalftone(AKey, -5);
+					Project.AddNoteByHalftone(AKey.Key, -5);
 					break;
 				case Key.C:
-					Project.AddNoteByHalftone(AKey, -3);
+					Project.AddNoteByHalftone(AKey.Key, -3);
 					break;
 				case Key.V:
-					Project.AddNoteByHalftone(AKey, -2);
+					Project.AddNoteByHalftone(AKey.Key, -2);
+					break;
+				case Key.G: // 2
+					Project.AddNoteByHalftone(AKey.Key, -1);
 					break;
 
 				case Key.B:
-					Project.AddNoteByHalftone(AKey, 0);
+					Project.AddNoteByHalftone(AKey.Key, 0);
 					break;
 
+				case Key.H: // 2
+					Project.AddNoteByHalftone(AKey.Key, 1);
+					break;
 				case Key.N:
-					Project.AddNoteByHalftone(AKey, 2);
+					Project.AddNoteByHalftone(AKey.Key, 2);
 					break;
 				case Key.M:
-					Project.AddNoteByHalftone(AKey, 3);
+					Project.AddNoteByHalftone(AKey.Key, 3);
 					break;
 				case Key.OemComma:
-					Project.AddNoteByHalftone(AKey, 5);
+					Project.AddNoteByHalftone(AKey.Key, 5);
 					break;
 				case Key.OemPeriod:
-					Project.AddNoteByHalftone(AKey, 7);
+					Project.AddNoteByHalftone(AKey.Key, 7);
 					break;
 				case Key.OemQuestion:
-					Project.AddNoteByHalftone(AKey, 9);
+					Project.AddNoteByHalftone(AKey.Key, 9);
 					break;
+
 				default:
-					Debug.WriteLine(AKey);
+					AKey.Handled = false;
 					break;
 			}
 		}
 
-		public void KeyUp(Key AKey)
+		public void KeyUp(System.Windows.Input.KeyEventArgs AKey)
 		{
-			switch (AKey)
+			AKey.Handled = true;
+			switch (AKey.Key)
 			{
 				case Key.F1:
 					Project.DebugMode = false;
+					return;
+				case Key.Space:
+					Project.NotePanic();
+					return;
+				default:
+					AKey.Handled = false;
 					break;
 			}
 
-			Project.DeleteNote(AKey);
+			FPressedKeys.Remove(AKey.Key);
+			AKey.Handled = Project.DeleteNote(AKey.Key);
 		}
 
 		public string Status
@@ -391,6 +445,43 @@ namespace SoundMap
 		private void StatusTimer_Tick(object sender, EventArgs e)
 		{
 			NotifyPropertyChanged(nameof(Status));
+		}
+
+		public RelayCommand StartRecordCommand
+		{
+			get
+			{
+				if (FStartRecordCommand == null)
+					FStartRecordCommand = new RelayCommand((obj) =>
+					{
+						using (SaveFileDialog dlg = new SaveFileDialog())
+						{
+							if (!string.IsNullOrEmpty(Project.FileName))
+							{
+								dlg.InitialDirectory = Path.GetFullPath(Project.FileName);
+								dlg.FileName = Path.GetFileName(Project.FileName);
+							}
+							dlg.Filter = "Wave file (*.wav)|*.wav";
+							dlg.FilterIndex = 1;
+							if (dlg.ShowDialog() == DialogResult.OK)
+								FProject.StartRecord(dlg.FileName);
+						}
+					});
+				return FStartRecordCommand;
+			}
+		}
+
+		public RelayCommand StopRecordCommand
+		{
+			get
+			{
+				if (FStopRecordCommand == null)
+					FStopRecordCommand = new RelayCommand((obj) =>
+					{
+						Project.StopRecord();
+					});
+				return FStopRecordCommand;
+			}
 		}
 	}
 }

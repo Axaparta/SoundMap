@@ -2,7 +2,6 @@
 using NAudio.Wave;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace SoundMap.Settings
 {
@@ -19,6 +18,11 @@ namespace SoundMap.Settings
 		public string[] Channels { get; }
 		public int[] SampleRates { get; }
 		public int DefaultLatency { get; }
+
+		public bool LatencyEnbled
+		{
+			get => FMmDevice != null;
+		}
 
 		public AudioOutput(MMDevice AMmDevice)
 		{

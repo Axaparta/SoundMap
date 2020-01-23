@@ -1,5 +1,4 @@
-﻿using NAudio.Dsp;
-using NAudio.Wave;
+﻿using NAudio.Wave;
 
 namespace SoundMap
 {
@@ -16,21 +15,19 @@ namespace SoundMap
 
 	public class Note
 	{
-		private readonly Envelope FEnvelope;
+		private readonly AdsrEnvelope FEnvelope;
 		private NotePhase FToSetPhase = NotePhase.Playing;
 		private NotePhase FPhase = NotePhase.Init;
 		private double FStartTime = double.NaN;
-		private double FStopTime = double.NaN;
 
 		public SoundPoint[] Points { get; set; }
 		public object Key { get; }
 
-		public Note(SoundPoint[] APoints, WaveFormat AFormat, object AKey)
+		public Note(SoundPoint[] APoints, WaveFormat AFormat, object AKey, AdsrEnvelope AEnvelope)
 		{
 			Points = APoints;
 			Key = AKey;
-
-			FEnvelope = Envelope.CreateFast();
+			FEnvelope = AEnvelope;
 		}
 
 		public NotePhase Phase
@@ -52,7 +49,6 @@ namespace SoundMap
 				case NotePhase.Stopping:
 					FToSetPhase = NotePhase.None;
 					FPhase = NotePhase.Stopping;
-					FStopTime = ATime;
 					FEnvelope.Stop(ATime);
 					break;
 			}

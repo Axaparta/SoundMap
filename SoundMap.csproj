@@ -8,11 +8,12 @@
     <OutputType>WinExe</OutputType>
     <RootNamespace>SoundMap</RootNamespace>
     <AssemblyName>SoundMap</AssemblyName>
-    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{60dc8134-eba5-43b8-bcc9-bb4bc16c2548};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
     <WarningLevel>4</WarningLevel>
     <Deterministic>true</Deterministic>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -23,6 +24,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -32,18 +34,24 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup>
     <ApplicationIcon>SoundMapIcon.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="CommandLine, Version=2.6.0.0, Culture=neutral, PublicKeyToken=5a870481e358d379, processorArchitecture=MSIL">
-      <HintPath>packages\CommandLineParser.2.6.0\lib\net40\CommandLine.dll</HintPath>
+    <Reference Include="CommandLine, Version=2.7.82.0, Culture=neutral, PublicKeyToken=5a870481e358d379, processorArchitecture=MSIL">
+      <HintPath>packages\CommandLineParser.2.7.82\lib\net40\CommandLine.dll</HintPath>
+    </Reference>
+    <Reference Include="MathNet.Numerics, Version=4.9.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>packages\MathNet.Numerics.4.9.0\lib\net461\MathNet.Numerics.dll</HintPath>
     </Reference>
     <Reference Include="NAudio, Version=1.9.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>packages\NAudio.1.9.0\lib\net35\NAudio.dll</HintPath>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.Numerics" />
+    <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Core" />
@@ -60,10 +68,14 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="AppCommandLine.cs" />
+    <Compile Include="Controls\AdsrEnvelopeControl.xaml.cs">
+      <DependentUpon>AdsrEnvelopeControl.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Controls\SoundPointControl.xaml.cs">
       <DependentUpon>SoundPointControl.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Envelope.cs" />
+    <Compile Include="AdsrEnvelope.cs" />
     <Compile Include="Note.cs" />
     <Compile Include="NoteSouceToBoolConverter.cs" />
     <Compile Include="NoteSourceEnum.cs" />
@@ -72,7 +84,7 @@
     <Compile Include="Settings\ProjectSettings.cs" />
     <Compile Include="Settings\WindowSettings.cs" />
     <Compile Include="Controls\SoundControl.cs" />
-    <Compile Include="Settings\SoundMapSettings.cs" />
+    <Compile Include="Settings\AppSettings.cs" />
     <Compile Include="SoundPoint.cs" />
     <Compile Include="SoundPointCollection.cs" />
     <Compile Include="SoundPointValue.cs" />
@@ -84,6 +96,10 @@
     <Compile Include="Windows\ProjectSettingsWindow.xaml.cs">
       <DependentUpon>ProjectSettingsWindow.xaml</DependentUpon>
     </Compile>
+    <Page Include="Controls\AdsrEnvelopeControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Controls\SoundPointControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -103,7 +119,7 @@
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Page Include="Themes\Generic.xaml">
+    <Page Include="Themes\BaseStyles.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
@@ -117,7 +133,7 @@
     </Page>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="MainWindowModel.cs" />
+    <Compile Include="Models\MainWindowModel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -136,6 +152,7 @@
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
     <Content Include="Default.smp" />
+    <None Include="app.config" />
     <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>

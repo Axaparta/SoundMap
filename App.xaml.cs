@@ -5,15 +5,12 @@ using System.Windows;
 
 namespace SoundMap
 {
-	/// <summary>
-	/// Interaction logic for App.xaml
-	/// </summary>
 	public partial class App : Application
 	{
 		public static string AppName { get; } = "SoundMap";
 		public static readonly string ConfigurePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppName);
 		public static readonly string SettingsFileName = Path.Combine(ConfigurePath, "Settings.xml");
-		public static SoundMapSettings Settings { get; private set; }
+		public static AppSettings Settings { get; private set; }
 		public static string[] Args { get; private set; }
 
 
@@ -23,15 +20,15 @@ namespace SoundMap
 			{
 				if (File.Exists(SettingsFileName))
 				{
-					Settings = XmlHelper.Load<SoundMapSettings>(SettingsFileName);
+					Settings = XmlHelper.Load<AppSettings>(SettingsFileName);
 				}
 				else
-					Settings = new SoundMapSettings();
+					Settings = new AppSettings();
 			}
 			catch (Exception ex)
 			{
 				ShowError("Load settings error: " + ex.Message);
-				Settings = new SoundMapSettings();
+				Settings = new AppSettings();
 			}
 
 			Args = e.Args;

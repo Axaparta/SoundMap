@@ -25,6 +25,8 @@
 		<KeyBinding Key="N" Modifiers="Ctrl" Command="{Binding NewProjectCommand}" />
 		<KeyBinding Key="S" Modifiers="Ctrl" Command="{Binding SaveProjectCommand}" />
 		<KeyBinding Key="O" Modifiers="Ctrl" Command="{Binding OpenProjectCommand}" />
+		<KeyBinding Key="F2" Command="{Binding StartRecordCommand}" />
+		<KeyBinding Key="F3" Command="{Binding StopRecordCommand}" />
 	</Window.InputBindings>
 	<Window.Resources>
 		<local:NoteSouceToBoolConverter x:Key="NoteSouceToBool" />
@@ -39,7 +41,21 @@
 				<MenuItem Header="Save project" InputGestureText="Ctrl+S" Command="{Binding SaveProjectCommand}" />
 				<MenuItem Header="Save project as..." Command="{Binding SaveProjectAsCommand}" />
 				<Separator />
-				<MenuItem Header="Save sample as..." Command="{Binding SaveSampleCommand}" />
+				<MenuItem
+					ItemsSource="{Binding SettingsProxy.FileHistory}"
+					Header="Recent projects" IsEnabled="{Binding SettingsProxy.HasFileHistory}">
+					<MenuItem.ItemContainerStyle>
+						<Style TargetType="MenuItem">
+							<Setter Property="Header">
+								<Setter.Value>
+									<Binding />
+								</Setter.Value>
+							</Setter>
+							<Setter Property="Command" Value="{Binding ElementName=This, Path=DataContext.RecentFileCommand}" />
+							<Setter Property="CommandParameter" Value="{Binding}" />
+						</Style>
+					</MenuItem.ItemContainerStyle>
+				</MenuItem>
 				<Separator />
 				<MenuItem Header="Exit" InputGestureText="Esc" Command="{Binding ExitCommand}" />
 			</MenuItem>
@@ -50,6 +66,9 @@
 			<MenuItem Header="Sound">
 				<MenuItem Header="Preferences..." Command="{Binding PreferencesCommand}" />
 				<MenuItem Header="Pause" InputGestureText="Pause" IsCheckable="True" IsChecked="{Binding IsPause}" />
+				<Separator />
+				<MenuItem Header="Start record" InputGestureText="F2" Command="{Binding StartRecordCommand}" />
+				<MenuItem Header="Stop record" InputGestureText="F3" Command="{Binding StopRecordCommand}" />
 			</MenuItem>
 		</Menu>
 		<StatusBar DockPanel.Dock="Bottom" IsManipulationEnabled="True">
@@ -111,6 +130,11 @@
 						VerticalAlignment="Center"
 						VerticalContentAlignment="Center"
 						DockPanel.Dock="Left" />
+				</GroupBox>
+				<GroupBox Margin="5,0,0,0" Header="ADSR" VerticalAlignment="Top">
+					<localControls:AdsrEnvelopeControl
+						Project="{Binding Project}"
+						Envelope="{Binding Project.Envelope}" />
 				</GroupBox>
 				<GroupBox Margin="5,0,0,0" Header="Note source" VerticalAlignment="Top">
 					<StackPanel Margin="5">
