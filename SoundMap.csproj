@@ -25,6 +25,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -40,6 +41,9 @@
     <ApplicationIcon>SoundMapIcon.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Cloo, Version=1.0.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>packages\Cloo.clSharp.1.0.1\lib\netstandard2.0\Cloo.dll</HintPath>
+    </Reference>
     <Reference Include="CommandLine, Version=2.7.82.0, Culture=neutral, PublicKeyToken=5a870481e358d379, processorArchitecture=MSIL">
       <HintPath>packages\CommandLineParser.2.7.82\lib\net40\CommandLine.dll</HintPath>
     </Reference>
@@ -79,7 +83,13 @@
     <Compile Include="Note.cs" />
     <Compile Include="NoteSouceToBoolConverter.cs" />
     <Compile Include="NoteSourceEnum.cs" />
+    <Compile Include="NoteWaveProviders\OpenCLWaveProvider.cs" />
+    <Compile Include="NoteWaveProviders\MTNoteWaveProvider.cs" />
+    <Compile Include="NoteWaveProviders\NoteWaveProvider.cs" />
+    <Compile Include="NoteWaveProviders\STNoteWaveProvider.cs" />
     <Compile Include="Settings\AudioOutput.cs" />
+    <Compile Include="Settings\MidiSettings.cs" />
+    <Compile Include="Settings\OpenCLSettings.cs" />
     <Compile Include="Settings\PreferencesSettings.cs" />
     <Compile Include="Settings\ProjectSettings.cs" />
     <Compile Include="Settings\WindowSettings.cs" />
@@ -153,6 +163,7 @@
     </EmbeddedResource>
     <Content Include="Default.smp" />
     <None Include="app.config" />
+    <EmbeddedResource Include="NoteWaveProviders\WaveProgram.cl" />
     <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>

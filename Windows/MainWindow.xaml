@@ -127,6 +127,7 @@
 				<GroupBox Header="Note" BorderThickness="1">
 					<localControls:SoundPointControl
 						Point="{Binding Project.SelectedPoint}"
+						Waveforms="{Binding Project.Waveforms}"
 						VerticalAlignment="Center"
 						VerticalContentAlignment="Center"
 						DockPanel.Dock="Left" />
@@ -154,6 +155,7 @@
 							IsChecked="{Binding Path=Project.NoteSource, Converter={StaticResource NoteSouceToBool}, ConverterParameter={x:Static local:NoteSourceEnum.Keyboard}}" />
 						<RadioButton
 							Content="MIDI"
+							IsEnabled="{Binding SettingsProxy.Preferences.Midi.HasMidiInput}"
 							IsChecked="{Binding Path=Project.NoteSource, Converter={StaticResource NoteSouceToBool}, ConverterParameter={x:Static local:NoteSourceEnum.MIDI}}" />
 						<ToggleButton
 							Padding="5"

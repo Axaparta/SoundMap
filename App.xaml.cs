@@ -38,7 +38,7 @@ namespace SoundMap
 
 		protected override void OnExit(ExitEventArgs e)
 		{
-			if (Settings.IsModify)
+			if (true)
 				try
 				{
 					XmlHelper.Save(Settings, SettingsFileName);

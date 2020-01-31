@@ -1,5 +1,6 @@
 ﻿using NAudio.CoreAudioApi;
 using NAudio.Wave;
+using SoundMap.NoteWaveProviders;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,6 +13,10 @@ namespace SoundMap.Settings
 	{
 		private static AudioOutput[] FAudioOutputs = null;
 		private static AudioOutput FDefaultAudioOutput = null;
+		private static readonly Dictionary<string, Type> FNoteProviders = new Dictionary<string, Type>();
+		private MidiSettings FMidi = null;
+		private OpenCLSettings FOpenCL = null;
+		private string FNoteProviderName = null;
 
 		[XmlIgnore]
 		public AudioOutput[] AudioOutputs => FAudioOutputs;
@@ -146,7 +151,69 @@ namespace SoundMap.Settings
 			r.FLatency = this.FLatency;
 			r.FSampleRate = this.FSampleRate;
 			r.FChannel = this.FChannel;
+			r.Midi = this.Midi.Clone();
+			r.OpenCL = this.OpenCL.Clone();
+			r.NoteProviderName = this.NoteProviderName;
 			return r;
+		}
+
+		public MidiSettings Midi
+		{
+			get
+			{
+				if (FMidi == null)
+					FMidi = new MidiSettings();
+				return FMidi;
+			}
+			set => FMidi = value;
+		}
+
+		public OpenCLSettings OpenCL
+		{
+			get
+			{
+				if (FOpenCL == null)
+					FOpenCL = new OpenCLSettings();
+				return FOpenCL;
+			}
+			set => FOpenCL = value;
+		}
+
+		public string NoteProviderName
+		{
+			get
+			{
+				if (FNoteProviderName == null)
+					FNoteProviderName = NoteProviderNames.First();
+				return FNoteProviderName;
+			}
+			set => FNoteProviderName = value;
+		}
+
+		private static void CheckNoteProviders()
+		{
+			if (FNoteProviders.Count == 0)
+			{
+				var a = typeof(NoteWaveProvider).Assembly.GetTypes().Where(t => !t.IsAbstract && t.IsSubclassOf(typeof(NoteWaveProvider)));
+				foreach (var t in a)
+					FNoteProviders.Add(t.Name, t);
+			}
+		}
+
+		public static string[] NoteProviderNames
+		{
+			get
+			{
+				CheckNoteProviders();
+				return FNoteProviders.Keys.ToArray();
+			}
+		}
+
+		public NoteWaveProvider CreateNoteProvider()
+		{
+			CheckNoteProviders();
+			var t = FNoteProviders[NoteProviderName];
+			return (NoteWaveProvider)Activator.CreateInstance(t);
 		}
 	}
 }

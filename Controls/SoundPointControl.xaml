@@ -7,8 +7,7 @@
 	xmlns:local="clr-namespace:SoundMap"
 	mc:Ignorable="d" 
 	Name="This"
-	MinWidth="150"
-	d:DesignHeight="350" d:DesignWidth="150">
+	MinWidth="150" >
 	<Grid Margin="5,5,5,0">
 		<Grid.Resources>
 			<Style TargetType="CheckBox" BasedOn="{StaticResource RightBaseStyle}">
@@ -37,8 +36,8 @@
 			Grid.Row="0"
 			Grid.Column="1"
 			Style="{StaticResource RightBaseStyle}"
-			Text="{Binding ElementName=This, Mode=OneWay, Path=Point, FallbackValue='-'}"
-			IsReadOnly="True" />
+			KeyDown="TextBox_KeyDown"
+			Text="{Binding ElementName=This, Mode=TwoWay, Path=Point.Frequency, StringFormat=F4, FallbackValue='-'}" />
 
 		<CheckBox
 			Grid.Row="1"
@@ -64,11 +63,10 @@
 			Grid.Row="3"
 			Grid.Column="1"
 			Style="{StaticResource RightBaseStyle}"
-			SelectedValuePath="Name"
-			SelectedValue="{Binding ElementName=This, Path=Point.WaveformName}"
+			SelectedValue="{Binding ElementName=This, Path=Point.Waveform}"
 			DisplayMemberPath="Name"
 			IsEnabled="{Binding ElementName=This, Path=IsPointEnabled}"
-			ItemsSource="{x:Static local:Waveform.BuildinWaveForms}" />
+			ItemsSource="{Binding ElementName=This, Path=Waveforms}" />
 
 		<Label
 			Grid.Row="4"
@@ -83,3 +81,4 @@
 			Text="{Binding Mode=TwoWay, ElementName=This, Path=Point.LeftFrequencyDelta}" />
 	</Grid>
 </UserControl>
+

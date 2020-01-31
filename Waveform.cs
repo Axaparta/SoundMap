@@ -1,62 +1,34 @@
-﻿using MathNet.Numerics.Distributions;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Numerics;
 
 namespace SoundMap
 {
 	public abstract class Waveform: ICloneable
 	{
-		private static Waveform[] FBuildinWaveForms = null;
 		protected const double TwoPi = 2 * Math.PI;
 
-		protected double FFrequency = 0;
 		public int SampleRate { get; private set; }
 		public abstract string Name { get; }
-		public virtual double Frequency
-		{
-			get => FFrequency;
-			set => FFrequency = value;
-		}
+
+		/// <summary>
+		/// Need for group init
+		/// </summary>
+		public List<Waveform> LinkedWaveforms { get; private set; } = new List<Waveform>();
 
 		public virtual void Init(int ASampleRate)
 		{
 			SampleRate = ASampleRate;
+			foreach (var lwf in LinkedWaveforms)
+				lwf.Init(ASampleRate);
 		}
 
-		public abstract double GetValue(double ATime);
-
-		public static Waveform[] BuildinWaveForms
-		{
-			get
-			{
-				if (FBuildinWaveForms == null)
-				{
-					FBuildinWaveForms = typeof(Waveform).Assembly.GetTypes().
-						Where(t => !t.IsAbstract && t.IsSubclassOf(typeof(Waveform))).
-						Select(tt => (Waveform)Activator.CreateInstance(tt)).ToArray();
-				}
-				return FBuildinWaveForms;
-			}
-		}
-
-		public static Waveform DefaultWaveform => BuildinWaveForms.First(wf => wf is SineWaveform);
-
-		public static Waveform CreateFromString(string AData)
-		{
-			return BuildinWaveForms.FirstOrDefault(wf => wf.Name == AData);
-		}
-
-		public string SerializeToString()
-		{
-			return Name;
-		}
+		public abstract double GetValue(double ATime, double AFrequency);
 
 		public virtual Waveform Clone()
 		{
 			var r = (Waveform)MemberwiseClone();
+			r.LinkedWaveforms = new List<Waveform>();
 			r.SampleRate = this.SampleRate;
 			return r;
 		}
@@ -65,15 +37,36 @@ namespace SoundMap
 		{
 			return Clone();
 		}
+
+		public override bool Equals(object obj)
+		{
+			if (obj == null)
+				return false;
+			return obj.GetHashCode() == this.GetHashCode();
+		}
+
+		public override int GetHashCode()
+		{
+			return Name.GetHashCode();
+		}
 	}
 
 	public class SineWaveform: Waveform
 	{
 		public override string Name => "Sine";
+		public double offset;
 
-		public override double GetValue(double ATime)
+		public override double GetValue(double ATime, double AFrequency)
 		{
-			return Math.Sin(TwoPi * ATime * Frequency);
+			return Math.Sin(TwoPi * ATime * AFrequency + offset);
+		}
+
+		public override Waveform Clone()
+		{
+			var r = (SineWaveform)base.Clone();
+			Random rnd = new Random();
+			r.offset = TwoPi * rnd.NextDouble();
+			return r;
 		}
 	}
 
@@ -99,15 +92,6 @@ namespace SoundMap
 		private static readonly Dictionary<WaveBufferKey, double[]> FSamples = new Dictionary<WaveBufferKey, double[]>();
 		protected double[] FSample = null;
 
-		public override double Frequency
-		{
-			get => base.Frequency;
-			set
-			{
-				base.Frequency = value;
-			}
-		}
-
 		public override void Init(int ASampleRate)
 		{
 			base.Init(ASampleRate);
@@ -126,9 +110,9 @@ namespace SoundMap
 
 		protected abstract double[] CreateSample(int ASampleRate);
 
-		public override double GetValue(double ATime)
+		public override double GetValue(double ATime, double AFrequency)
 		{
-			return FSample[(ulong)(ATime * SampleRate * Frequency) % (ulong)SampleRate];
+			return FSample[(ulong)(ATime * SampleRate * AFrequency) % (ulong)SampleRate];
 		}
 	}
 

@@ -17,6 +17,7 @@ namespace SoundMap
 		private bool FIsSolo = false;
 		private bool FIsMute = false;
 		private Waveform FWaveform = null;
+		private Waveform FLeftWaveform = null;
 		private double FLFrequencyDelta = 0;
 
 		private double FVolume = 0;
@@ -48,41 +49,22 @@ namespace SoundMap
 		{
 			get
 			{
-				if (FWaveform == null)
-					FWaveform = Waveform.DefaultWaveform;
 				return FWaveform;
 			}
 			set
 			{
+				var wf = value.Clone();
+				var lwf = value.Clone();
+				wf.LinkedWaveforms.Add(lwf);
 				if (FWaveform != null)
-				{
-					value.Frequency = FWaveform.Frequency;
-					value.Init(FWaveform.SampleRate);
-				}
-				FWaveform = value;
+					wf.Init(FWaveform.SampleRate);
+				FWaveform = wf;
+				FLeftWaveform = lwf;
+				WaveformName = FWaveform.Name;
 			}
 		}
 
-		[XmlIgnore]
-		public string WaveformName
-		{
-			get => Waveform.Name;
-			set
-			{
-				Waveform = Waveform.BuildinWaveForms.First(wf => wf.Name == value).Clone();
-			}
-		}
-
-		public string WaveformData
-		{
-			get => Waveform.SerializeToString();
-			set
-			{
-				FWaveform = Waveform.CreateFromString(value);
-				if (FWaveform != null)
-					FWaveform.Frequency = Frequency;
-			}
-		}
+		public string WaveformName { get; set; }
 
 		public bool IsSolo
 		{
@@ -122,7 +104,8 @@ namespace SoundMap
 		public SoundPoint Clone()
 		{
 			var p = (SoundPoint)MemberwiseClone();
-			p.Waveform = this.Waveform.Clone();
+			p.FWaveform = this.FWaveform.Clone();
+			p.FLeftWaveform = this.FLeftWaveform.Clone();
 			return p;
 		}
 
@@ -157,10 +140,9 @@ namespace SoundMap
 			get => FFrequency;
 			set
 			{
-				//if (FFrequency != value)
+				if (FFrequency != value)
 				{
 					FFrequency = value;
-					Waveform.Frequency = Frequency;
 					NotifyPropertyChanged(nameof(Frequency));
 				}
 			}
@@ -173,18 +155,13 @@ namespace SoundMap
 
 		public string AsString => ToString();
 
-		//private double GetValue(double AFrequency, double ATime)
-		//{
-		//	return Math.Sin(AFrequency * ATime * Math.PI * 2);
-		//}
-
 		public SoundPointValue GetValue(double ATime)
 		{
-			var rv = Waveform.GetValue(ATime);
+			var rv = FWaveform.GetValue(ATime, FFrequency);
 			double lv = rv;
 
-			//if (FLFrequencyDelta != 0)
-			//	lv = GetValue(FFrequency + FLFrequencyDelta, ATime);
+			if (FLFrequencyDelta != 0)
+				lv = FLeftWaveform.GetValue(ATime, FFrequency + FLFrequencyDelta);
 
 			return new SoundPointValue(lv, rv);
 		}

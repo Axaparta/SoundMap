@@ -1,4 +1,5 @@
 ﻿using NAudio.Wave;
+using SoundMap.NoteWaveProviders;
 using SoundMap.Settings;
 using System;
 using System.Collections.Generic;
@@ -18,8 +19,8 @@ namespace SoundMap
 	public class SoundProject: Observable, ISampleProvider
 	{
 		public static readonly string FileFilter = "SoundMap project (*.smp)|*.smp";
+		private static Waveform[] FBuildinWaveforms = null;
 
-		private double FTime = 0;
 		private ProjectSettings FSettings = new ProjectSettings();
 		private NoteSourceEnum FNoteSource = NoteSourceEnum.ContinueOne;
 		private RelayCommand FNotePanicCommand = null;
@@ -32,6 +33,7 @@ namespace SoundMap
 		private Note FContinueOneNote = null;
 		private string FStatus;
 		private AdsrEnvelope FEnvelope = null;
+		private NoteWaveProvider FWaveProvider = null;
 
 		[XmlIgnore]
 		public WaveFormat WaveFormat { get; private set; }
@@ -117,6 +119,10 @@ namespace SoundMap
 		public static SoundProject CreateFromFile(string AFileName)
 		{
 			var r = XmlHelper.Load<SoundProject>(AFileName);
+
+			foreach (var p in r.Points)
+				p.Waveform = r.CreateWaveform(p.WaveformName);
+
 			r.FileName = AFileName;
 			r.IsModify = false;
 			return r;
@@ -206,13 +212,24 @@ namespace SoundMap
 			}
 		}
 
-		public void InitGenerator(int ASampleRate, int AChannels)
+		public void StartPlay(int ASampleRate, int AChannels)
 		{
 			WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(ASampleRate, AChannels);
 			FContinueOneNote = new Note(null, WaveFormat, null, AdsrEnvelope.Fast);
-			FTime = 0;
 			foreach (var p in Points)
 				p.Waveform.Init(ASampleRate);
+
+			//FWaveProvider = new MTNoteWaveProvider();
+			FWaveProvider = App.Settings.Preferences.CreateNoteProvider();
+			FWaveProvider.Init(WaveFormat);
+		}
+
+		public void StopPlay()
+		{
+			NotePanic();
+			if (FWaveProvider is IDisposable d)
+				d.Dispose();
+			FWaveProvider = null;
 		}
 
 		public SoundPoint CreateDefaultPoint(double AFrequency, double AVolume)
@@ -222,6 +239,7 @@ namespace SoundMap
 				Frequency = AFrequency,
 				Volume = AVolume
 			};
+			p.Waveform = DefaultWaveform;
 			p.Waveform.Init(WaveFormat.SampleRate);
 			return p;
 		}
@@ -236,14 +254,15 @@ namespace SoundMap
 				return $"{App.AppName} [{Path.GetFileNameWithoutExtension(FileName)}{m}]";
 			}
 		}
-
+		
 		public int Read(float[] buffer, int offset, int count)
 		{
 			long startRead = FDebugStopwatch.ElapsedMilliseconds;
+			long startReadTicks = FDebugStopwatch.ElapsedTicks;
 
 			int maxn = offset + count;
 
-			Note[] notes = null;
+			Note[] notes = { };
 
 			switch (FNoteSource)
 			{
@@ -265,74 +284,16 @@ namespace SoundMap
 					break;
 			}
 
-#if false
-			for (int n = offset; n < maxn; n++)
-			{
-				SoundPointValue op = new SoundPointValue();
-				if (notes == null)
-					op = GetValue(points, FTime);
-				else
-				{
-					for (int i = 0; i < notes.Length; i++)
-						op += notes[i].GetValue(FTime);
-				}
+			//if (notes.Length > 0)
+			//	Debug.WriteLine("Before SP.Read");
 
-				switch (WaveFormat.Channels)
-				{
-					case 1:
-						buffer[n] = (float)op.Right;
-						break;
-					case 2:
-						buffer[n] = (float)op.Right;
-						n++;
-						buffer[n] = (float)op.Left;
-						break;
-					default:
-						throw new NotSupportedException($"Channels count: " + WaveFormat.Channels);
-				}
-
-				FTime += 1 / (double)WaveFormat.SampleRate;
-			}
-#else
-			double startTime = FTime;
-
-			if (notes == null)
-			{
-				for (int n = offset; n < maxn; n++)
-					buffer[n] = 0;
-			}
-			else
-			{
-				foreach (var n in notes)
-					n.UpdatePhase(FTime);
-				switch (WaveFormat.Channels)
-				{
-					case 2:
-						Parallel.For(0, count / 2, (n) =>
-							{
-								var time = startTime + n / (double)WaveFormat.SampleRate;
-
-								SoundPointValue op = new SoundPointValue();
-
-								for (int i = 0; i < notes.Length; i++)
-									op += notes[i].GetValue(time);
-
-								var index = offset + 2 * n;
-								buffer[index] = (float)op.Right;
-								buffer[index + 1] = (float)op.Left;
-							});
-
-						FTime += (count / 2) / (double)WaveFormat.SampleRate;
-						break;
-					default:
-						throw new NotSupportedException($"Channels count: " + WaveFormat.Channels);
-				}
-			}
-#endif
+			FWaveProvider.Read(notes, buffer, offset, maxn);
 
 			long endRead = FDebugStopwatch.ElapsedMilliseconds;
+			long endReadTicks = FDebugStopwatch.ElapsedTicks;
 			var dotsPerChannel = count / WaveFormat.Channels;
 			var bufferTime = 1000 * dotsPerChannel / WaveFormat.SampleRate;
+			var bufferTimeTicks = 1000 * dotsPerChannel / WaveFormat.SampleRate * TimeSpan.TicksPerMillisecond;
 
 			if (endRead - startRead >= bufferTime)
 				Debug.WriteLine("Overload! " + (endRead - startRead - bufferTime));
@@ -352,8 +313,12 @@ namespace SoundMap
 					rs = " Recording...";
 				}
 
-				Interlocked.Exchange(ref FStatus, $"Load: {100 * (endRead - startRead) / bufferTime,3}% ({bufferTime}){rs}");
+				//Interlocked.Exchange(ref FStatus, $"Load: {100 * (endRead - startRead) / bufferTime,3}% ({bufferTime}){rs}");
+				Interlocked.Exchange(ref FStatus, $"Load: {100 * (endReadTicks - startReadTicks) / bufferTimeTicks, 3}% ({bufferTime}) {rs}");
 			}
+
+			//if (notes.Length > 0)
+			//	Debug.WriteLine("After SP.Read");
 
 			FOldStartRead = startRead;
 			return count;
@@ -490,6 +455,32 @@ namespace SoundMap
 					FFileWriter = null;
 				}
 			}
+		}
+
+		public Waveform[] BuildinWaveforms
+		{
+			get
+			{
+				if (FBuildinWaveforms == null)
+				{
+					FBuildinWaveforms = typeof(Waveform).Assembly.GetTypes().
+						Where(t => !t.IsAbstract && t.IsSubclassOf(typeof(Waveform))).
+						Select(tt => (Waveform)Activator.CreateInstance(tt)).ToArray();
+				}
+				return FBuildinWaveforms;
+			}
+		}
+
+		public Waveform DefaultWaveform => BuildinWaveforms.First(wf => wf is SineWaveform);
+
+		public Waveform[] Waveforms => BuildinWaveforms;
+
+		public Waveform CreateWaveform(string AName)
+		{
+			var r = Waveforms.FirstOrDefault(wf => wf.Name == AName);
+			if (r == null)
+				r = DefaultWaveform;
+			return r;
 		}
 	}
 }

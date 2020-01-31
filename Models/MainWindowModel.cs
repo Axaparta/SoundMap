@@ -102,20 +102,19 @@ namespace SoundMap.Models
 				FOutput = App.Settings.Preferences.CreateOutput();
 				if ((FProject != null) && (FOutput != null))
 				{
+					// Остановить как бы нажатое до запуска звука
 					FProject.NotePanic();
-					FProject.InitGenerator(App.Settings.Preferences.SampleRate, App.Settings.Preferences.Channels);
+					FProject.StartPlay(App.Settings.Preferences.SampleRate, App.Settings.Preferences.Channels);
 					FOutput.Init(FProject);
-					//var sg = new SignalGenerator(App.Settings.Preferences.SampleRate, App.Settings.Preferences.Channels);
-					//sg.Frequency = 220;
-					//sg.Type = SignalGeneratorType.Sin;
-					//FOutput.Init(sg);
 					FOutput.Play();
 				}
 			}
 			catch (Exception ex)
 			{
+				if (FOutput != null)
+					FOutput.Dispose();
 				FOutput = null;
-				App.ShowError(ex.Message);
+				App.ShowError("Play: " + ex.Message);
 			}
 		}
 
@@ -123,10 +122,10 @@ namespace SoundMap.Models
 		{
 			if (FOutput != null)
 			{
-				FProject?.NotePanic();
 				FOutput.Stop();
 				FOutput.Dispose();
 				FOutput = null;
+				FProject.StopPlay();
 			}
 		}
 

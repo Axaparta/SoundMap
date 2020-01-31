@@ -1,5 +1,6 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 
 namespace SoundMap.Controls
 {
@@ -36,6 +37,21 @@ namespace SoundMap.Controls
 		internal void UpdateIsPointEnabled()
 		{
 			IsPointEnabled = (Point != null);
+		}
+
+		public static readonly DependencyProperty WaveformsProperty = DependencyProperty.Register(
+			"Waveforms", typeof(Waveform[]), typeof(SoundPointControl), new FrameworkPropertyMetadata(null));
+
+		public Waveform[] Waveforms
+		{
+			get => (Waveform[])GetValue(WaveformsProperty);
+			set => SetValue(WaveformsProperty, value);
+		}
+
+		private void TextBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+		{
+			if (e.Key == Key.Return)
+				(sender as TextBox).GetBindingExpression(TextBox.TextProperty).UpdateSource();
 		}
 	}
 }

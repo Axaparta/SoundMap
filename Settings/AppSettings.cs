@@ -58,14 +58,5 @@ namespace SoundMap.Settings
 			}
 			set => FPreferences = value;
 		}
-
-		[XmlIgnore]
-		public bool IsModify
-		{
-			get
-			{
-				return true;
-			}
-		}
 	}
 }

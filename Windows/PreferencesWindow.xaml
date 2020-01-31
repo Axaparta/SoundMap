@@ -27,6 +27,8 @@
 				<RowDefinition Height="Auto"/>
 				<RowDefinition Height="Auto"/>
 				<RowDefinition Height="Auto"/>
+				<RowDefinition Height="Auto"/>
+				<RowDefinition Height="Auto"/>
 			</Grid.RowDefinitions>
 			<Grid.ColumnDefinitions>
 				<ColumnDefinition Width="Auto"/>
@@ -91,7 +93,26 @@
 			</Grid>
 
 			<Label Grid.Row="2" Grid.Column="0" Content="MIDI input" Style="{StaticResource TitleLabel}" />
-			<ComboBox Grid.Row="2" Grid.Column="1" />
+			<ComboBox
+				Grid.Row="2" Grid.Column="1"
+				IsReadOnly="True"
+				ItemsSource="{x:Static settings:MidiSettings.MidiInputNames}"
+				SelectedItem="{Binding Midi.MidiInputName}"
+				/>
+
+			<Label Grid.Row="3" Grid.Column="0" Content="Engine" Style="{StaticResource TitleLabel}" />
+			<ComboBox
+				Grid.Row="3" Grid.Column="1"
+				IsReadOnly="True"
+				ItemsSource="{x:Static settings:PreferencesSettings.NoteProviderNames}"
+				SelectedItem="{Binding NoteProviderName}" />
+
+			<Label Grid.Row="4" Grid.Column="0" Content="OpenCL" Style="{StaticResource TitleLabel}" />
+			<ComboBox
+				Grid.Row="4" Grid.Column="1"
+				IsReadOnly="True"
+				ItemsSource="{x:Static settings:OpenCLSettings.PlatformDeviceNames}"
+				SelectedItem="{Binding OpenCL.PlatformDeviceName}" />
 		</Grid>
 		<StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Grid.Column="1">
 			<StackPanel.Resources>
