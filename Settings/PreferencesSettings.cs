@@ -3,6 +3,8 @@ using NAudio.Wave;
 using SoundMap.NoteWaveProviders;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Xml.Serialization;
 
@@ -13,7 +15,7 @@ namespace SoundMap.Settings
 	{
 		private static AudioOutput[] FAudioOutputs = null;
 		private static AudioOutput FDefaultAudioOutput = null;
-		private static readonly Dictionary<string, Type> FNoteProviders = new Dictionary<string, Type>();
+		private static readonly Dictionary<string, Tuple<NoteWaveAttribute, Type>> FNoteProviders = new Dictionary<string, Tuple<NoteWaveAttribute, Type>>();
 		private MidiSettings FMidi = null;
 		private OpenCLSettings FOpenCL = null;
 		private string FNoteProviderName = null;
@@ -184,36 +186,55 @@ namespace SoundMap.Settings
 			get
 			{
 				if (FNoteProviderName == null)
-					FNoteProviderName = NoteProviderNames.First();
+					FNoteProviderName = NoteProviders.First().Key;
 				return FNoteProviderName;
 			}
 			set => FNoteProviderName = value;
 		}
 
-		private static void CheckNoteProviders()
-		{
-			if (FNoteProviders.Count == 0)
-			{
-				var a = typeof(NoteWaveProvider).Assembly.GetTypes().Where(t => !t.IsAbstract && t.IsSubclassOf(typeof(NoteWaveProvider)));
-				foreach (var t in a)
-					FNoteProviders.Add(t.Name, t);
-			}
-		}
-
-		public static string[] NoteProviderNames
+		[XmlIgnore]
+		public Type NoteProviderType
 		{
 			get
 			{
-				CheckNoteProviders();
-				return FNoteProviders.Keys.ToArray();
+				foreach (var kv in NoteProviders)
+					if (kv.Key == NoteProviderName)
+						return kv.Value.Item2;
+				return null;
+			}
+			set
+			{
+				foreach (var kv in NoteProviders)
+					if (kv.Value.Item2.Equals(value))
+					{
+						NoteProviderName = kv.Key;
+						break;
+					}
+			}
+		}
+
+		public static Dictionary<string, Tuple<NoteWaveAttribute, Type>> NoteProviders
+		{
+			get
+			{
+				if (FNoteProviders.Count == 0)
+				{
+					foreach (var t in new[] { typeof(MTNoteWaveProvider), typeof(STNoteWaveProvider), typeof(OpenCLWaveProvider) })
+					{
+						var dAttr = t.GetCustomAttributes(typeof(NoteWaveAttribute), false).Cast<NoteWaveAttribute>().FirstOrDefault();
+						Debug.Assert(dAttr != null);
+						FNoteProviders.Add(dAttr.Name, new Tuple<NoteWaveAttribute, Type>(dAttr, t));
+					}
+				}
+				return FNoteProviders;
 			}
 		}
 
 		public NoteWaveProvider CreateNoteProvider()
 		{
-			CheckNoteProviders();
-			var t = FNoteProviders[NoteProviderName];
-			return (NoteWaveProvider)Activator.CreateInstance(t);
+			if (!NoteProviders.TryGetValue(NoteProviderName, out var v))
+				v = NoteProviders.First().Value;
+			return (NoteWaveProvider)Activator.CreateInstance(v.Item2);
 		}
 	}
 }

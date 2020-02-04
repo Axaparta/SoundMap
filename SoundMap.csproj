@@ -76,13 +76,18 @@
     <Compile Include="Controls\AdsrEnvelopeControl.xaml.cs">
       <DependentUpon>AdsrEnvelopeControl.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Controls\RoundScroller.cs" />
     <Compile Include="Controls\SoundPointControl.xaml.cs">
       <DependentUpon>SoundPointControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="AdsrEnvelope.cs" />
+    <Compile Include="Controls\VerticalScroller.xaml.cs" />
+    <Compile Include="Controls\VolumeMeter.xaml.cs" />
+    <Compile Include="ICLItem.cs" />
     <Compile Include="Note.cs" />
     <Compile Include="NoteSouceToBoolConverter.cs" />
     <Compile Include="NoteSourceEnum.cs" />
+    <Compile Include="NoteWaveProviders\NoteWaveAttribute.cs" />
     <Compile Include="NoteWaveProviders\OpenCLWaveProvider.cs" />
     <Compile Include="NoteWaveProviders\MTNoteWaveProvider.cs" />
     <Compile Include="NoteWaveProviders\NoteWaveProvider.cs" />
@@ -113,6 +118,14 @@
     <Page Include="Controls\SoundPointControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\VerticalScroller.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Controls\VolumeMeter.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="Windows\MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>

@@ -23,7 +23,6 @@ namespace SoundMap
 
 		private ProjectSettings FSettings = new ProjectSettings();
 		private NoteSourceEnum FNoteSource = NoteSourceEnum.ContinueOne;
-		private RelayCommand FNotePanicCommand = null;
 
 		private WaveFileWriter FFileWriter = null;
 		private readonly object FFileWriterLock = new object();
@@ -34,6 +33,7 @@ namespace SoundMap
 		private string FStatus;
 		private AdsrEnvelope FEnvelope = null;
 		private NoteWaveProvider FWaveProvider = null;
+		private double FMasterVolume = 1;
 
 		[XmlIgnore]
 		public WaveFormat WaveFormat { get; private set; }
@@ -47,11 +47,23 @@ namespace SoundMap
 		[XmlIgnore]
 		public string FileName { get; set; }
 
-		[XmlIgnore]
-		public bool DebugMode { get; set; } = false;
 		private readonly Stopwatch FDebugStopwatch = new Stopwatch();
 		private long FOldStartRead = 0;
 		private bool FIsModify = false;
+
+		public double MasterVolume
+		{
+			get => FMasterVolume;
+			set
+			{
+				if (FMasterVolume != value)
+				{
+					FMasterVolume = value;
+					IsModify = true;
+					NotifyPropertyChanged(() => MasterVolume);
+				}
+			}
+		}
 
 		public NoteSourceEnum NoteSource
 		{
@@ -219,7 +231,6 @@ namespace SoundMap
 			foreach (var p in Points)
 				p.Waveform.Init(ASampleRate);
 
-			//FWaveProvider = new MTNoteWaveProvider();
 			FWaveProvider = App.Settings.Preferences.CreateNoteProvider();
 			FWaveProvider.Init(WaveFormat);
 		}
@@ -257,8 +268,8 @@ namespace SoundMap
 		
 		public int Read(float[] buffer, int offset, int count)
 		{
-			long startRead = FDebugStopwatch.ElapsedMilliseconds;
-			long startReadTicks = FDebugStopwatch.ElapsedTicks;
+			long beginTicks = FDebugStopwatch.ElapsedTicks;
+			long beginTime = FDebugStopwatch.ElapsedMilliseconds;
 
 			int maxn = offset + count;
 
@@ -284,70 +295,46 @@ namespace SoundMap
 					break;
 			}
 
-			//if (notes.Length > 0)
-			//	Debug.WriteLine("Before SP.Read");
+			var beginRead = FDebugStopwatch.ElapsedMilliseconds;
 
-			FWaveProvider.Read(notes, buffer, offset, maxn);
+			FWaveProvider.Read(notes, buffer, offset, maxn, FMasterVolume);
 
-			long endRead = FDebugStopwatch.ElapsedMilliseconds;
-			long endReadTicks = FDebugStopwatch.ElapsedTicks;
-			var dotsPerChannel = count / WaveFormat.Channels;
-			var bufferTime = 1000 * dotsPerChannel / WaveFormat.SampleRate;
-			var bufferTimeTicks = 1000 * dotsPerChannel / WaveFormat.SampleRate * TimeSpan.TicksPerMillisecond;
+			var endRead = FDebugStopwatch.ElapsedMilliseconds;
 
-			if (endRead - startRead >= bufferTime)
-				Debug.WriteLine("Overload! " + (endRead - startRead - bufferTime));
-
-			if (DebugMode)
-			{
-				Debug.WriteLine($"NewStart - OldStart = {startRead - FOldStartRead}, ThreadId: {Thread.CurrentThread.ManagedThreadId}");
-				Debug.WriteLine($"Start {startRead}, end {endRead}, D: {endRead - startRead}, Count: {count}, CTime (msec): {bufferTime}, (Saple/Sec): {WaveFormat.SampleRate}");
-			}
-
+			string isRecording = string.Empty;
 			lock (FFileWriterLock)
 			{
-				string rs = string.Empty;
 				if (FFileWriter != null)
 				{
 					FFileWriter.WriteSamples(buffer, offset, count);
-					rs = " Recording...";
+					isRecording = " Recording... ";
 				}
-
-				//Interlocked.Exchange(ref FStatus, $"Load: {100 * (endRead - startRead) / bufferTime,3}% ({bufferTime}){rs}");
-				Interlocked.Exchange(ref FStatus, $"Load: {100 * (endReadTicks - startReadTicks) / bufferTimeTicks, 3}% ({bufferTime}) {rs}");
 			}
 
-			//if (notes.Length > 0)
-			//	Debug.WriteLine("After SP.Read");
+			var endTicks = FDebugStopwatch.ElapsedTicks;
+			var endTime = FDebugStopwatch.ElapsedMilliseconds;
+			// Семплов на один канал в буфере
+			var dotsPerChannel = count / WaveFormat.Channels;
+			// Сколько миллисекунд в буфере
+			var bufferTime = 1000 * dotsPerChannel / WaveFormat.SampleRate;
+			// Сколько тиков в буфере
+			var bufferTimeTicks = 1000 * dotsPerChannel / WaveFormat.SampleRate * TimeSpan.TicksPerMillisecond;
 
-			FOldStartRead = startRead;
+			Interlocked.Exchange(ref FStatus, $"{FWaveProvider.Name}, load: {100 * (endTicks - beginTicks) / bufferTimeTicks, 3}% ({bufferTime}) {isRecording}");
+
+			if (endTime - beginTime >= bufferTime)
+				Debug.WriteLine("Overload! " + (endRead - beginTime - bufferTime));
+
+			if (App.DebugMode)
+			{
+				//Debug.WriteLine($"NewStart - OldStart = {beginTime - FOldStartRead}, ThreadId: {Thread.CurrentThread.ManagedThreadId}");
+				//Debug.WriteLine($"Project.Read tot: {endTime - beginTime}, Count: {count}, CTime (msec): {bufferTime}, (Saple/Sec): {WaveFormat.SampleRate}, read: {afterRead - readBefore}");
+				Debug.WriteLine($"Project.Read tot1: {endTime - beginTime}, tot2: {FDebugStopwatch.ElapsedMilliseconds - beginTime}, befR: {beginRead - beginTime}, aftR: {endTime - endRead}");
+			}
+
+			FOldStartRead = beginTime;
 			return count;
 		}
-
-		//public SoundPointValue GetValue(SoundPoint[] APoints, double ATime)
-		//{
-		//	double max = 0;
-		//	SoundPointValue r = new SoundPointValue();
-
-		//	foreach (var p in APoints)
-		//	{
-		//		if (p.IsMute)
-		//			continue;
-
-		//		max += p.Volume;
-		//		var v = p.Volume * p.GetValue(ATime);
-
-		//		if (p.IsSolo)
-		//			return v;
-
-		//		r += v;
-		//	}
-
-		//	if (max > 1)
-		//		r /= max;
-
-		//	return r;
-		//}
 
 		public SoundPointEvent SoundControlAddPointAction
 		{
@@ -379,7 +366,7 @@ namespace SoundMap
 			}
 		}
 
-		public void AddNote(object AKey, double AMultipler)
+		public void AddNote(object AKey, double AMultipler, double AVolume)
 		{
 			if ((NoteSource == NoteSourceEnum.ContinueOne) || (NoteSource == NoteSourceEnum.None))
 				return;
@@ -398,10 +385,15 @@ namespace SoundMap
 			}
 		}
 
-		public void AddNoteByHalftone(object AKey, int AHalftoneOffset)
+		public void AddNoteByHalftone(object AKey, int AHalftoneOffset, double AVolume = 1)
 		{
 			var v = Math.Pow(2, (double)AHalftoneOffset / 12);
-			AddNote(AKey, v);
+			AddNote(AKey, v, AVolume);
+		}
+
+		public int? GetHalftoneFromMidiNoteNumber(int ANoteIndex)
+		{
+			return ANoteIndex - 57;
 		}
 
 		public bool DeleteNote(object AKey)
@@ -421,16 +413,6 @@ namespace SoundMap
 			get
 			{
 				return FStatus;
-			}
-		}
-
-		public RelayCommand NotePanicCommand
-		{
-			get
-			{
-				if (FNotePanicCommand == null)
-					FNotePanicCommand = new RelayCommand((obj) => NotePanic());
-				return FNotePanicCommand;
 			}
 		}
 

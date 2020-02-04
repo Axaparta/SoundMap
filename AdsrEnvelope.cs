@@ -7,7 +7,7 @@ using System.Xml.Serialization;
 namespace SoundMap
 {
 	[Serializable]
-	public class AdsrEnvelope: ICloneable
+	public class AdsrEnvelope: ICloneable, ICLItem
 	{
 		private const double Epsilon = 0.01;
 		private const double EpsilonPlus = 1 + Epsilon;
@@ -202,6 +202,28 @@ namespace SoundMap
 		}
 
 		public bool StopIgnore => FReleaseTime == 0;
+
+		public float[] CLParams
+		{
+			get => new float[]
+				{
+					(float)FAttakK,
+					(float)FAttacTime,
+
+					(float)FDecayK,
+					(float)FDecayTime,
+
+					(float)FReleaseK,
+					(float)FReleaseTime,
+
+					(double.IsNaN(FStartTime)? -1: (float)FStartTime),
+					(double.IsNaN(FStopTime)? -1: (float)FStopTime),
+					(float)FStopValue,
+					(float)SustainLevel
+				};
+		}
+
+		public static int CLParamSize => 10;
 
 		object ICloneable.Clone()
 		{

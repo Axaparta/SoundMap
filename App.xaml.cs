@@ -1,18 +1,20 @@
 ﻿using SoundMap.Settings;
 using System;
 using System.IO;
+using System.Threading;
 using System.Windows;
 
 namespace SoundMap
 {
 	public partial class App : Application
 	{
+		private static int FDebugMode = 0;
+
 		public static string AppName { get; } = "SoundMap";
 		public static readonly string ConfigurePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppName);
 		public static readonly string SettingsFileName = Path.Combine(ConfigurePath, "Settings.xml");
 		public static AppSettings Settings { get; private set; }
 		public static string[] Args { get; private set; }
-
 
 		protected override void OnStartup(StartupEventArgs e)
 		{
@@ -53,6 +55,18 @@ namespace SoundMap
 		public static void ShowError(string AMessage)
 		{
 			MessageBox.Show(AMessage, "Error", MessageBoxButton.OK, MessageBoxImage.Error, MessageBoxResult.OK);
+		}
+
+		public static bool DebugMode
+		{
+			get => FDebugMode == 1;
+			set
+			{
+				if (value)
+					Interlocked.Exchange(ref FDebugMode, 1);
+				else
+					Interlocked.Exchange(ref FDebugMode, 0);
+			}
 		}
 	}
 }

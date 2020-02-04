@@ -6,6 +6,7 @@
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 	xmlns:local="clr-namespace:SoundMap"
 	xmlns:localControls="clr-namespace:SoundMap.Controls"
+	xmlns:dsControls="clr-namespace:DeepSound.Controls"
 	mc:Ignorable="d"
 	Closed="Window_Closed"
 	Loaded="Window_Loaded"
@@ -27,6 +28,10 @@
 		<KeyBinding Key="O" Modifiers="Ctrl" Command="{Binding OpenProjectCommand}" />
 		<KeyBinding Key="F2" Command="{Binding StartRecordCommand}" />
 		<KeyBinding Key="F3" Command="{Binding StopRecordCommand}" />
+
+		<KeyBinding Key="D1" Modifiers="Alt" Command="{Binding SetWaveProviderCommand}" CommandParameter="1" />
+		<KeyBinding Key="D2" Modifiers="Alt" Command="{Binding SetWaveProviderCommand}" CommandParameter="2" />
+		<KeyBinding Key="D3" Modifiers="Alt" Command="{Binding SetWaveProviderCommand}" CommandParameter="3" />
 	</Window.InputBindings>
 	<Window.Resources>
 		<local:NoteSouceToBoolConverter x:Key="NoteSouceToBool" />
@@ -99,23 +104,6 @@
 					</localControls:SoundControl.Background>
 				</localControls:SoundControl>
 
-				<!--<StackPanel Grid.Row="0" Grid.Column="1" Orientation="Vertical">
-					<StackPanel.Resources>
-						<Style TargetType="Button">
-							<Setter Property="Width" Value="32" />
-							<Setter Property="Height" Value="32" />
-							<Setter Property="Margin" Value="5,0,0,5" />
-						</Style>
-					</StackPanel.Resources>
-					<Button Content="Stat" Command="{Binding SetNewPointKindCommand}">
-						--><!--<Button.CommandParameter>
-							<local:PointKind>Static</local:PointKind>
-						</Button.CommandParameter>--><!--
-					</Button>
-					<Button Content="Bell" Command="{Binding SetNewPointKindCommand}">
-
-					</Button>
-				</StackPanel>-->
 			</Grid>
 
 			<StackPanel
@@ -159,9 +147,41 @@
 							IsChecked="{Binding Path=Project.NoteSource, Converter={StaticResource NoteSouceToBool}, ConverterParameter={x:Static local:NoteSourceEnum.MIDI}}" />
 						<ToggleButton
 							Padding="5"
-							Content="Note panic" Command="{Binding Project.NotePanicCommand}" />
+							Content="Note panic" Command="{Binding NotePanicCommand}" />
 					</StackPanel>
 				</GroupBox>
+			</StackPanel>
+
+			<StackPanel
+				Orientation="Horizontal"
+				Grid.Row="1" Grid.Column="0"
+				HorizontalAlignment="Right">
+				<dsControls:VerticalScroller
+				MaxValue="2"
+				Value="{Binding Project.MasterVolume, Mode=TwoWay}"
+				MinValue="0"
+				Title="Master" >
+					<dsControls:VerticalScroller.ValueForeground>
+						<SolidColorBrush Color="{DynamicResource {x:Static SystemColors.GrayTextColorKey}}"/>
+					</dsControls:VerticalScroller.ValueForeground>
+					<dsControls:VerticalScroller.ValueBackground>
+						<SolidColorBrush Color="{DynamicResource {x:Static SystemColors.ControlColorKey}}"/>
+					</dsControls:VerticalScroller.ValueBackground>
+					<dsControls:VerticalScroller.FocusForeground>
+						<SolidColorBrush Color="{DynamicResource {x:Static SystemColors.ControlTextColorKey}}"/>
+					</dsControls:VerticalScroller.FocusForeground>
+				</dsControls:VerticalScroller>
+				<dsControls:VolumeMeter
+					CellSize="10"
+					Width="50">
+					<dsControls:VolumeMeter.GaudeGradient>
+						<GradientStopCollection>
+							<GradientStop Color="Red" Offset="1" />
+							<GradientStop Color="Orange" Offset="0.8" />
+							<GradientStop Color="Green" Offset="0" />
+						</GradientStopCollection>
+					</dsControls:VolumeMeter.GaudeGradient>
+				</dsControls:VolumeMeter>
 			</StackPanel>
 		</Grid>
 	</DockPanel>

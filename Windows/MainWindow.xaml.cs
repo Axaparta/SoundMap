@@ -40,7 +40,7 @@ namespace SoundMap.Windows
 
 		private void This_KeyDown(object sender, KeyEventArgs e)
 		{
-			if (Keyboard.FocusedElement is TextBox)
+			if ((Keyboard.FocusedElement is TextBox) || (Keyboard.FocusedElement is ComboBox))
 				return;
 
 			if (!e.IsRepeat)
@@ -52,7 +52,7 @@ namespace SoundMap.Windows
 
 		private void This_KeyUp(object sender, KeyEventArgs e)
 		{
-			if (Keyboard.FocusedElement is TextBox)
+			if ((Keyboard.FocusedElement is TextBox) || (Keyboard.FocusedElement is ComboBox))
 				return;
 
 			((MainWindowModel)DataContext).KeyUp(e);

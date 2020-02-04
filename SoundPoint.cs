@@ -103,9 +103,18 @@ namespace SoundMap
 
 		public SoundPoint Clone()
 		{
-			var p = (SoundPoint)MemberwiseClone();
-			p.FWaveform = this.FWaveform.Clone();
-			p.FLeftWaveform = this.FLeftWaveform.Clone();
+			var p = new SoundPoint()
+			{
+				FFrequency = this.FFrequency,
+				FIsMute = this.FIsMute,
+				FIsSelected = this.FIsSelected,
+				FIsSolo = this.FIsSolo,
+				FWaveform = this.FWaveform.Clone(),
+				FLeftWaveform = this.FLeftWaveform.Clone(),
+				FLFrequencyDelta = this.FLFrequencyDelta,
+				FVolume = this.FVolume
+			};
+
 			return p;
 		}
 

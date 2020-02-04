@@ -46,8 +46,9 @@ namespace SoundMap.Settings
 		{
 			get
 			{
-				using (var m = CreateMidiIn())
-					return m != null;
+				//using (var m = CreateMidiIn())
+				//	return m != null;
+				return true;
 			}
 		}
 

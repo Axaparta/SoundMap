@@ -1,16 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace SoundMap.NoteWaveProviders
 {
+	[NoteWave("Multithread")]
 	public class MTNoteWaveProvider : NoteWaveProvider
 	{
-		public override void Read(Note[] notes, float[] buffer, int inclusiveFrom, int exclusiveTo)
+		public override void Read(Note[] notes, float[] buffer, int inclusiveFrom, int exclusiveTo, double masterVolume)
 		{
-			base.Read(notes, buffer, inclusiveFrom, exclusiveTo);
+			base.Read(notes, buffer, inclusiveFrom, exclusiveTo, masterVolume);
 
 			var count = exclusiveTo - inclusiveFrom;
 			double startTime = FTime;
@@ -23,6 +25,8 @@ namespace SoundMap.NoteWaveProviders
 
 				for (int i = 0; i < notes.Length; i++)
 					op += notes[i].GetValue(time);
+
+				op *= masterVolume;
 
 				var index = inclusiveFrom + 2 * n;
 				buffer[index] = (float)op.Right;

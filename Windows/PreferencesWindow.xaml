@@ -97,20 +97,23 @@
 				Grid.Row="2" Grid.Column="1"
 				IsReadOnly="True"
 				ItemsSource="{x:Static settings:MidiSettings.MidiInputNames}"
-				SelectedItem="{Binding Midi.MidiInputName}"
-				/>
+				SelectedItem="{Binding Midi.MidiInputName}" />
 
 			<Label Grid.Row="3" Grid.Column="0" Content="Engine" Style="{StaticResource TitleLabel}" />
 			<ComboBox
+				Name="EngineComboBox"
 				Grid.Row="3" Grid.Column="1"
 				IsReadOnly="True"
-				ItemsSource="{x:Static settings:PreferencesSettings.NoteProviderNames}"
-				SelectedItem="{Binding NoteProviderName}" />
+				SelectedValuePath="Key"
+				DisplayMemberPath="Key"
+				ItemsSource="{x:Static settings:PreferencesSettings.NoteProviders}"
+				SelectedValue="{Binding NoteProviderName}" />
 
 			<Label Grid.Row="4" Grid.Column="0" Content="OpenCL" Style="{StaticResource TitleLabel}" />
 			<ComboBox
 				Grid.Row="4" Grid.Column="1"
 				IsReadOnly="True"
+				IsEnabled="{Binding ElementName=EngineComboBox, Path=SelectedItem.Value.Item1.IsOpenCLEnabled}"
 				ItemsSource="{x:Static settings:OpenCLSettings.PlatformDeviceNames}"
 				SelectedItem="{Binding OpenCL.PlatformDeviceName}" />
 		</Grid>

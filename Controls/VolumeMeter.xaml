@@ -1,0 +1,46 @@
+﻿<UserControl
+	x:Class="DeepSound.Controls.VolumeMeter"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+	x:Name="Self"
+	mc:Ignorable="d" 
+	IsTabStop="False"
+	Focusable="False"
+	d:DesignHeight="300" d:DesignWidth="100">
+	<UniformGrid Rows="1">
+		<UniformGrid.Resources>
+			<Style TargetType="Label">
+				<Setter Property="HorizontalContentAlignment" Value="Center" />
+				<Setter Property="Margin" Value="0" />
+				<Setter Property="Padding" Value="1" />
+			</Style>
+			<Style TargetType="ProgressBar">
+				<Setter Property="Margin" Value="5" />
+			</Style>
+		</UniformGrid.Resources>
+		<DockPanel Margin="1,0,0,0">
+			<Label
+				Foreground="{Binding ElementName=Self, Path=Foreground}"
+				FontFamily="{Binding ElementName=Self, Path=FontFamily}"
+				FontSize="{Binding ElementName=Self, Path=FontSize}"
+				FontWeight="{Binding ElementName=Self, Path=FontWeight}"
+				FontStyle="{Binding ElementName=Self, Path=FontStyle}"
+				FontStretch="{Binding ElementName=Self, Path=FontStretch}"
+				DockPanel.Dock="Top" Content="L" />
+			<Canvas Name="LeftCanvas" />
+    </DockPanel>
+		<DockPanel Margin="0,0,1,0">
+			<Label
+				Foreground="{Binding ElementName=Self, Path=Foreground}"
+				FontFamily="{Binding ElementName=Self, Path=FontFamily}"
+				FontSize="{Binding ElementName=Self, Path=FontSize}"
+				FontWeight="{Binding ElementName=Self, Path=FontWeight}"
+				FontStyle="{Binding ElementName=Self, Path=FontStyle}"
+				FontStretch="{Binding ElementName=Self, Path=FontStretch}"
+				DockPanel.Dock="Top" Content="R" />
+			<Canvas Name="RightCanvas" />
+		</DockPanel>
+	</UniformGrid>
+</UserControl>

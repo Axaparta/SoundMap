@@ -1,5 +1,7 @@
 ﻿using CommandLine;
+using NAudio.Midi;
 using NAudio.Wave;
+using SoundMap.NoteWaveProviders;
 using SoundMap.Settings;
 using SoundMap.Windows;
 using System;
@@ -32,6 +34,8 @@ namespace SoundMap.Models
 
 		private RelayCommand FStartRecordCommand = null;
 		private RelayCommand FStopRecordCommand = null;
+		private RelayCommand FSetWaveProviderCommand = null;
+		private RelayCommand FNotePanicCommand = null;
 
 		private SoundProject FProject = new SoundProject();
 		private bool FIsPause = false;
@@ -39,8 +43,10 @@ namespace SoundMap.Models
 		private readonly MainWindow FMainWindow;
 		private readonly DispatcherTimer FStatusTimer;
 		private readonly List<Key> FPressedKeys = new List<Key>();
+		private readonly List<int> FPressedNotes = new List<int>();
 
 		public AppSettings SettingsProxy => App.Settings;
+		private MidiIn FMidiIn = null;
 
 		public MainWindowModel(MainWindow AMainWindow)
 		{
@@ -107,6 +113,13 @@ namespace SoundMap.Models
 					FProject.StartPlay(App.Settings.Preferences.SampleRate, App.Settings.Preferences.Channels);
 					FOutput.Init(FProject);
 					FOutput.Play();
+
+					FMidiIn = App.Settings.Preferences.Midi.CreateMidiIn();
+					if (FMidiIn != null)
+					{
+						FMidiIn.MessageReceived += MidiIn_MessageReceived;
+						FMidiIn.Start();
+					}
 				}
 			}
 			catch (Exception ex)
@@ -122,6 +135,14 @@ namespace SoundMap.Models
 		{
 			if (FOutput != null)
 			{
+				if (FMidiIn != null)
+				{
+					FMidiIn.Stop();
+					FMidiIn.MessageReceived -= MidiIn_MessageReceived;
+					FMidiIn.Dispose();
+					FMidiIn = null;
+				}
+
 				FOutput.Stop();
 				FOutput.Dispose();
 				FOutput = null;
@@ -351,6 +372,52 @@ namespace SoundMap.Models
 			}
 		}
 
+		private void MidiIn_MessageReceived(object sender, MidiInMessageEventArgs e)
+		{
+			if (e.MidiEvent == null)
+				return;
+
+			switch (e.MidiEvent.CommandCode)
+			{
+				case MidiCommandCode.NoteOn:
+					var non = e.MidiEvent as NoteOnEvent;
+					if (non == null)
+					{
+						var nev = e.MidiEvent as NoteEvent;
+						if (nev == null)
+							;// Debug.WriteLine("NoteOn  >> {0}", e.MidiEvent.GetType().Name);
+						else
+						{
+							if (FPressedNotes.IndexOf(nev.NoteNumber) == -1)
+								return;
+
+							//Debug.WriteLine("NoteOff >> Ch: {0}, NNumb: {1} [{2}]", nev.Channel, nev.NoteName, nev.NoteNumber);
+							var n = Project.GetHalftoneFromMidiNoteNumber(nev.NoteNumber);
+							if (n.HasValue)
+							{
+								//Debug.WriteLine("DEL NOTE");
+								Project.DeleteNote(n.Value);
+								FPressedNotes.Remove(nev.NoteNumber);
+							}
+						}
+					}
+					else
+					{
+						if (FPressedNotes.IndexOf(non.NoteNumber) != -1)
+							return;
+						//Debug.WriteLine("NoteOn  >> Ch: {0}, NNumb: {1} [{2}], Vel: {3}", non.Channel, non.NoteName, non.NoteNumber, non.Velocity);
+						var n = Project.GetHalftoneFromMidiNoteNumber(non.NoteNumber);
+						if (n.HasValue)
+						{
+							//Debug.WriteLine("ADD NOTE");
+							Project.AddNoteByHalftone(n, n.Value, (float)non.Velocity / 127f);
+							FPressedNotes.Add(non.NoteNumber);
+						}
+					}
+					break;
+			}
+		}
+
 		public void KeyDown(System.Windows.Input.KeyEventArgs AKey)
 		{
 			if (FPressedKeys.IndexOf(AKey.Key) != -1)
@@ -361,7 +428,10 @@ namespace SoundMap.Models
 			switch (AKey.Key)
 			{
 				case Key.F1:
-					Project.DebugMode = true;
+					App.DebugMode = true;
+					break;
+				case Key.A: // 2
+					Project.AddNoteByHalftone(AKey.Key, -8);
 					break;
 				case Key.Z:
 					Project.AddNoteByHalftone(AKey.Key, -7);
@@ -372,7 +442,11 @@ namespace SoundMap.Models
 				case Key.X:
 					Project.AddNoteByHalftone(AKey.Key, -5);
 					break;
+				case Key.D: // 2
+					Project.AddNoteByHalftone(AKey.Key, -4);
+					break;
 				case Key.C:
+				case Key.F: // 2
 					Project.AddNoteByHalftone(AKey.Key, -3);
 					break;
 				case Key.V:
@@ -395,17 +469,30 @@ namespace SoundMap.Models
 				case Key.M:
 					Project.AddNoteByHalftone(AKey.Key, 3);
 					break;
+				case Key.K: // 2
+					Project.AddNoteByHalftone(AKey.Key, 4);
+					break;
 				case Key.OemComma:
 					Project.AddNoteByHalftone(AKey.Key, 5);
+					break;
+				case Key.L: // 2
+					Project.AddNoteByHalftone(AKey.Key, 6);
 					break;
 				case Key.OemPeriod:
 					Project.AddNoteByHalftone(AKey.Key, 7);
 					break;
+				case Key.Oem1: // 2
+					Project.AddNoteByHalftone(AKey.Key, 8);
+					break;
 				case Key.OemQuestion:
 					Project.AddNoteByHalftone(AKey.Key, 9);
 					break;
+				case Key.OemQuotes: // 2
+					Project.AddNoteByHalftone(AKey.Key, 10);
+					break;
 
 				default:
+					//Debug.WriteLine(AKey.Key);
 					AKey.Handled = false;
 					break;
 			}
@@ -417,7 +504,7 @@ namespace SoundMap.Models
 			switch (AKey.Key)
 			{
 				case Key.F1:
-					Project.DebugMode = false;
+					App.DebugMode = false;
 					return;
 				case Key.Space:
 					Project.NotePanic();
@@ -480,6 +567,49 @@ namespace SoundMap.Models
 						Project.StopRecord();
 					});
 				return FStopRecordCommand;
+			}
+		}
+
+		public RelayCommand SetWaveProviderCommand
+		{
+			get
+			{
+				if (FSetWaveProviderCommand == null)
+					FSetWaveProviderCommand = new RelayCommand((param) =>
+					{
+						if (!IsPause)
+							StopPlay();
+						switch (param)
+						{
+							case "1":
+								App.Settings.Preferences.NoteProviderType = typeof(STNoteWaveProvider);
+								break;
+							case "2":
+								App.Settings.Preferences.NoteProviderType = typeof(MTNoteWaveProvider);
+								break;
+							case "3":
+								App.Settings.Preferences.NoteProviderType = typeof(OpenCLWaveProvider);
+								break;
+						}
+						if (!IsPause)
+							StartPlay();
+					});
+				return FSetWaveProviderCommand;
+			}
+		}
+
+		public RelayCommand NotePanicCommand
+		{
+			get
+			{
+				if (FNotePanicCommand == null)
+					FNotePanicCommand = new RelayCommand((obj) =>
+					{
+						FPressedKeys.Clear();
+						FPressedNotes.Clear();
+						Project.NotePanic();
+					});
+				return FNotePanicCommand;
 			}
 		}
 	}

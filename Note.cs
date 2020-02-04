@@ -22,8 +22,9 @@ namespace SoundMap
 
 		public SoundPoint[] Points { get; set; }
 		public object Key { get; }
+		public double Volume { get; set; } = 1;
 
-		public Note(SoundPoint[] APoints, WaveFormat AFormat, object AKey, AdsrEnvelope AEnvelope)
+		public Note(SoundPoint[] APoints, WaveFormat AFormat, object AKey, AdsrEnvelope AEnvelope, double AVolume = 1)
 		{
 			Points = APoints;
 			Key = AKey;
@@ -35,6 +36,8 @@ namespace SoundMap
 			get => FPhase;
 			set => FToSetPhase = value;
 		}
+
+		public AdsrEnvelope Envelope => FEnvelope;
 
 		public void UpdatePhase(double ATime)
 		{
@@ -79,7 +82,7 @@ namespace SoundMap
 			if (max > 1)
 				r /= max;
 
-			r *= FEnvelope.GetValue(ATime);
+			r *= FEnvelope.GetValue(ATime) * Volume;
 
 			return r;
 		}
