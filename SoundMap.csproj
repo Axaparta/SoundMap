@@ -36,9 +36,10 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup>
-    <ApplicationIcon>SoundMapIcon.ico</ApplicationIcon>
+    <ApplicationIcon>Images\SoundMapIcon.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Cloo, Version=1.0.1.0, Culture=neutral, processorArchitecture=MSIL">
@@ -50,11 +51,19 @@
     <Reference Include="MathNet.Numerics, Version=4.9.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>packages\MathNet.Numerics.4.9.0\lib\net461\MathNet.Numerics.dll</HintPath>
     </Reference>
-    <Reference Include="NAudio, Version=1.9.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>packages\NAudio.1.9.0\lib\net35\NAudio.dll</HintPath>
+    <Reference Include="NAudio, Version=1.10.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>packages\NAudio.1.10.0\lib\net35\NAudio.dll</HintPath>
     </Reference>
+    <Reference Include="OxyPlot, Version=2.0.0.0, Culture=neutral, PublicKeyToken=638079a8f0bd61e9, processorArchitecture=MSIL">
+      <HintPath>packages\OxyPlot.Core.2.0.0\lib\net45\OxyPlot.dll</HintPath>
+    </Reference>
+    <Reference Include="OxyPlot.Wpf, Version=2.0.0.0, Culture=neutral, PublicKeyToken=75e952ba404cdbb0, processorArchitecture=MSIL">
+      <HintPath>packages\OxyPlot.Wpf.2.0.0\lib\net45\OxyPlot.Wpf.dll</HintPath>
+    </Reference>
+    <Reference Include="ReachFramework" />
     <Reference Include="System" />
     <Reference Include="System.Numerics" />
+    <Reference Include="System.Printing" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
@@ -73,9 +82,15 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="AppCommandLine.cs" />
+    <Compile Include="Common\HexHelper.cs" />
     <Compile Include="Controls\AdsrEnvelopeControl.xaml.cs">
       <DependentUpon>AdsrEnvelopeControl.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Controls\ConturControl.cs" />
+    <Compile Include="Controls\CustomWaveformControl.xaml.cs">
+      <DependentUpon>CustomWaveformControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="OneHerzList.cs" />
     <Compile Include="Controls\RoundScroller.cs" />
     <Compile Include="Controls\SoundPointControl.xaml.cs">
       <DependentUpon>SoundPointControl.xaml</DependentUpon>
@@ -83,10 +98,16 @@
     <Compile Include="AdsrEnvelope.cs" />
     <Compile Include="Controls\VerticalScroller.xaml.cs" />
     <Compile Include="Controls\VolumeMeter.xaml.cs" />
-    <Compile Include="ICLItem.cs" />
+    <Compile Include="Interpolators\AkimaSplineInterpolator.cs" />
+    <Compile Include="Interpolators\BezierInterpolator.cs" />
+    <Compile Include="Interpolators\CubeSplineInterpolator.cs" />
+    <Compile Include="Interpolators\IInterpolatorValueProvider.cs" />
+    <Compile Include="Interpolators\Interpolator.cs" />
+    <Compile Include="Interpolators\LineInterpolator.cs" />
     <Compile Include="Note.cs" />
     <Compile Include="NoteSouceToBoolConverter.cs" />
     <Compile Include="NoteSourceEnum.cs" />
+    <Compile Include="NoteWaveProviders\NoteWaveArgs.cs" />
     <Compile Include="NoteWaveProviders\NoteWaveAttribute.cs" />
     <Compile Include="NoteWaveProviders\OpenCLWaveProvider.cs" />
     <Compile Include="NoteWaveProviders\MTNoteWaveProvider.cs" />
@@ -104,7 +125,10 @@
     <Compile Include="SoundPointCollection.cs" />
     <Compile Include="SoundPointValue.cs" />
     <Compile Include="SoundProject.cs" />
-    <Compile Include="Waveform.cs" />
+    <Compile Include="Waveforms\BufferWaveform.cs" />
+    <Compile Include="Waveforms\CustomWaveform.cs" />
+    <Compile Include="Waveforms\SineWaveform.cs" />
+    <Compile Include="Waveforms\Waveform.cs" />
     <Compile Include="Windows\PreferencesWindow.xaml.cs">
       <DependentUpon>PreferencesWindow.xaml</DependentUpon>
     </Compile>
@@ -112,6 +136,10 @@
       <DependentUpon>ProjectSettingsWindow.xaml</DependentUpon>
     </Compile>
     <Page Include="Controls\AdsrEnvelopeControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\CustomWaveformControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -126,6 +154,10 @@
     <Page Include="Controls\VolumeMeter.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Themes\Icons.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Windows\MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
@@ -170,11 +202,12 @@
       <DependentUpon>Settings.settings</DependentUpon>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
     </Compile>
+    <Resource Include="Images\openHS.png" />
+    <Resource Include="Images\saveHS.png" />
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
-    <Content Include="Default.smp" />
     <None Include="app.config" />
     <EmbeddedResource Include="NoteWaveProviders\WaveProgram.cl" />
     <None Include="packages.config" />
@@ -184,7 +217,12 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="SoundMapIcon.ico" />
+    <Resource Include="Images\SoundMapIcon.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Images\Add.png" />
+    <Resource Include="Images\Apply.png" />
+    <Resource Include="Images\Delete.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

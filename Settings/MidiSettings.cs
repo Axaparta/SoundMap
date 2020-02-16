@@ -60,6 +60,11 @@ namespace SoundMap.Settings
 			};
 		}
 
+		public static void UpdateDevices()
+		{
+			FMidiInputNames = null;
+		}
+
 		object ICloneable.Clone()
 		{
 			return Clone();

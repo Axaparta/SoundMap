@@ -1,16 +1,18 @@
-﻿using NAudio.Wave;
+﻿using Common;
+using NAudio.Wave;
 using SoundMap.NoteWaveProviders;
 using SoundMap.Settings;
+using SoundMap.Waveforms;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
-using System.Windows;
+using System.Windows.Threading;
 using System.Xml.Serialization;
 
 namespace SoundMap
@@ -19,7 +21,6 @@ namespace SoundMap
 	public class SoundProject: Observable, ISampleProvider
 	{
 		public static readonly string FileFilter = "SoundMap project (*.smp)|*.smp";
-		private static Waveform[] FBuildinWaveforms = null;
 
 		private ProjectSettings FSettings = new ProjectSettings();
 		private NoteSourceEnum FNoteSource = NoteSourceEnum.ContinueOne;
@@ -34,6 +35,15 @@ namespace SoundMap
 		private AdsrEnvelope FEnvelope = null;
 		private NoteWaveProvider FWaveProvider = null;
 		private double FMasterVolume = 1;
+		private double FLVolume = 0;
+		private double FRVolume = 0;
+		private DispatcherTimer FVolumeTimer;
+		
+		/// <summary>
+		/// Содержит все вафформы. CustomWaveforms выбирается из него
+		/// </summary>
+		[XmlIgnore]
+		public ObservableCollection<Waveform> Waveforms { get; } = new ObservableCollection<Waveform>();
 
 		[XmlIgnore]
 		public WaveFormat WaveFormat { get; private set; }
@@ -125,7 +135,22 @@ namespace SoundMap
 			Points.PointPropertyChanged += Points_PointPropertyChanged;
 			SelectedPoints.CollectionChanged += SelectedPoints_CollectionChanged;
 
+			FVolumeTimer = new DispatcherTimer();
+			FVolumeTimer.Tick += new EventHandler(VolumeTimerTick);
+			FVolumeTimer.Interval = TimeSpan.FromMilliseconds(50);
+
+			Waveforms.Add(new SineWaveform());
+			Waveforms.Add(new BufferSineWaveForm());
+			Waveforms.Add(new BufferSawLWaveForm());
+
+			Waveforms.CollectionChanged += Waveforms_CollectionChanged;
+
 			FDebugStopwatch.Start();
+		}
+
+		private void Waveforms_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+		{
+			NotifyPropertyChanged(nameof(CustomWaveforms));
 		}
 
 		public static SoundProject CreateFromFile(string AFileName)
@@ -133,7 +158,7 @@ namespace SoundMap
 			var r = XmlHelper.Load<SoundProject>(AFileName);
 
 			foreach (var p in r.Points)
-				p.Waveform = r.CreateWaveform(p.WaveformName);
+				p.Project = r;
 
 			r.FileName = AFileName;
 			r.IsModify = false;
@@ -158,23 +183,11 @@ namespace SoundMap
 		private void Points_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
 		{
 			IsModify = true;
+			NotifyPropertyChanged(nameof(PointsInfo));
 		}
 
 		private void Points_PointPropertyChanged(object sender, PropertyChangedEventArgs e)
 		{
-			if ((sender != null) && (e != null))
-			{
-				var sp = (SoundPoint)sender;
-				// Устанавливается соло, но оно может быть только одно!
-				if ((e.PropertyName == nameof(SoundPoint.IsSolo)) && sp.IsSolo)
-				{
-					Points.ChangedLock();
-					foreach (var p in Points)
-						p.IsSolo = p == sp;
-					Points.ChangedUnlock();
-				}
-			}
-
 			SelectedPoints.ChangedLock();
 			SelectedPoints.Clear();
 			foreach (var p in Points)
@@ -228,15 +241,21 @@ namespace SoundMap
 		{
 			WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(ASampleRate, AChannels);
 			FContinueOneNote = new Note(null, WaveFormat, null, AdsrEnvelope.Fast);
-			foreach (var p in Points)
-				p.Waveform.Init(ASampleRate);
+			//foreach (var p in Points)
+			//	p.Waveform.Init(ASampleRate);
+			//foreach (var wf in Waveforms)
+			//	wf.Init(ASampleRate);
 
 			FWaveProvider = App.Settings.Preferences.CreateNoteProvider();
+
 			FWaveProvider.Init(WaveFormat);
+			FVolumeTimer.Start();
 		}
 
 		public void StopPlay()
 		{
+			FVolumeTimer.Stop();
+			LVolume = RVolume = 0;
 			NotePanic();
 			if (FWaveProvider is IDisposable d)
 				d.Dispose();
@@ -245,14 +264,7 @@ namespace SoundMap
 
 		public SoundPoint CreateDefaultPoint(double AFrequency, double AVolume)
 		{
-			SoundPoint p = new SoundPoint()
-			{
-				Frequency = AFrequency,
-				Volume = AVolume
-			};
-			p.Waveform = DefaultWaveform;
-			p.Waveform.Init(WaveFormat.SampleRate);
-			return p;
+			return new SoundPoint(this, AFrequency, AVolume);
 		}
 
 		public string Title
@@ -274,6 +286,9 @@ namespace SoundMap
 			int maxn = offset + count;
 
 			Note[] notes = { };
+
+			foreach (var wf in Waveforms)
+				wf.Init(WaveFormat.SampleRate);
 
 			switch (FNoteSource)
 			{
@@ -297,7 +312,11 @@ namespace SoundMap
 
 			var beginRead = FDebugStopwatch.ElapsedMilliseconds;
 
-			FWaveProvider.Read(notes, buffer, offset, maxn, FMasterVolume);
+			var ss = Waveforms.OfType<BufferWaveform>().Select(bfw => new KeyValuePair<int, double[]>(bfw.GetHashCode(), bfw.Sample)).ToArray();
+
+			NoteWaveArgs a = new NoteWaveArgs(ss, FMasterVolume);
+
+			FWaveProvider.Read(notes, buffer, offset, maxn, a);
 
 			var endRead = FDebugStopwatch.ElapsedMilliseconds;
 
@@ -321,6 +340,8 @@ namespace SoundMap
 			var bufferTimeTicks = 1000 * dotsPerChannel / WaveFormat.SampleRate * TimeSpan.TicksPerMillisecond;
 
 			Interlocked.Exchange(ref FStatus, $"{FWaveProvider.Name}, load: {100 * (endTicks - beginTicks) / bufferTimeTicks, 3}% ({bufferTime}) {isRecording}");
+			Interlocked.Exchange(ref FLVolume, a.MaxL);
+			Interlocked.Exchange(ref FRVolume, a.MaxR);
 
 			if (endTime - beginTime >= bufferTime)
 				Debug.WriteLine("Overload! " + (endRead - beginTime - bufferTime));
@@ -375,7 +396,6 @@ namespace SoundMap
 			{
 				p = p.Clone();
 				p.Frequency *= AMultipler;
-				p.IsNote = true;
 				return p;
 			}).ToArray();
 
@@ -439,30 +459,73 @@ namespace SoundMap
 			}
 		}
 
-		public Waveform[] BuildinWaveforms
-		{
-			get
-			{
-				if (FBuildinWaveforms == null)
-				{
-					FBuildinWaveforms = typeof(Waveform).Assembly.GetTypes().
-						Where(t => !t.IsAbstract && t.IsSubclassOf(typeof(Waveform))).
-						Select(tt => (Waveform)Activator.CreateInstance(tt)).ToArray();
-				}
-				return FBuildinWaveforms;
-			}
-		}
-
-		public Waveform DefaultWaveform => BuildinWaveforms.First(wf => wf is SineWaveform);
-
-		public Waveform[] Waveforms => BuildinWaveforms;
-
-		public Waveform CreateWaveform(string AName)
+		public Waveform GetWaveform(string AName)
 		{
 			var r = Waveforms.FirstOrDefault(wf => wf.Name == AName);
 			if (r == null)
-				r = DefaultWaveform;
+				r = Waveforms.First();
 			return r;
+		}
+
+		[XmlIgnore]
+		public double LVolume
+		{
+			get => FLVolume;
+			set
+			{
+				if (FLVolume != value)
+				{
+					FLVolume = value;
+					NotifyPropertyChanged(nameof(LVolume));
+				}
+			}
+		}
+
+		[XmlIgnore]
+		public double RVolume
+		{
+			get => FRVolume;
+			set
+			{
+				if (FRVolume != value)
+				{
+					FRVolume = value;
+					NotifyPropertyChanged(nameof(RVolume));
+				}
+			}
+		}
+
+		private void VolumeTimerTick(object sender, EventArgs e)
+		{
+			NotifyPropertyChanged(nameof(LVolume));
+			NotifyPropertyChanged(nameof(RVolume));
+		}
+
+		/// <summary>
+		/// For statusbar
+		/// </summary>
+		public string PointsInfo
+		{
+			get => $"Point count: {Points.Count}";
+		}
+
+		/// <summary>
+		/// Для сериализации и отображения списка в CustomWaveformcontrol
+		/// </summary>
+		public CustomWaveform[] CustomWaveforms
+		{
+			get => Waveforms.Where(wf => wf is CustomWaveform).Cast<CustomWaveform>().ToArray();
+			set
+			{
+				List<Waveform> customWf = new List<Waveform>();
+				customWf.AddRange(Waveforms.Where(wf => wf is CustomWaveform));
+				foreach (var cwf in customWf)
+					Waveforms.Remove(cwf);
+
+				if (value != null)
+					foreach (var v in value)
+						Waveforms.Add(v);
+			}
 		}
 	}
 }

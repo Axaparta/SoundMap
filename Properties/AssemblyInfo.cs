@@ -8,9 +8,9 @@ using System.Windows;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("SoundMap")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyDescription("Software sound synteser")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
+[assembly: AssemblyCompany("Korsakov R. L. kr.rm@ya.ru")]
 [assembly: AssemblyProduct("SoundMap")]
 [assembly: AssemblyCopyright("Copyright ©  2019")]
 [assembly: AssemblyTrademark("")]

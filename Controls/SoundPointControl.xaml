@@ -5,6 +5,7 @@
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
 	xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
 	xmlns:local="clr-namespace:SoundMap"
+	xmlns:controls="clr-namespace:DeepSound.Controls"
 	mc:Ignorable="d" 
 	Name="This"
 	MinWidth="150" >
@@ -20,7 +21,6 @@
 			<ColumnDefinition Width="1*"/>
 		</Grid.ColumnDefinitions>
 		<Grid.RowDefinitions>
-			<RowDefinition Height="Auto"/>
 			<RowDefinition Height="Auto"/>
 			<RowDefinition Height="Auto"/>
 			<RowDefinition Height="Auto"/>
@@ -41,16 +41,24 @@
 
 		<CheckBox
 			Grid.Row="1"
-			Grid.Column="1"
+			Grid.Column="0"
 			Content="Mute"
 			IsChecked="{Binding ElementName=This, Path=Point.IsMute, FallbackValue=False}"
 			IsEnabled="{Binding ElementName=This, Path=IsPointEnabled}" />
 
-		<CheckBox
-			Grid.Row="2"
+		<Label
+			Grid.Row="2" Grid.Column="0"
+			Style="{StaticResource HeaderLabel}"
+			Content="Balance" />
+
+		<controls:RoundScroller
+			Grid.Row="1"
+			Grid.RowSpan="2"
 			Grid.Column="1"
-			Content="Solo"
-			IsChecked="{Binding ElementName=This, Path=Point.IsSolo, FallbackValue=False}"
+			MinValue="-1"
+			MaxValue="+1"
+			Value="{Binding ElementName=This, Path=Point.LRBalance, Mode=TwoWay}"
+			Width="40" Margin="0" 
 			IsEnabled="{Binding ElementName=This, Path=IsPointEnabled}" />
 
 		<Label
@@ -63,22 +71,11 @@
 			Grid.Row="3"
 			Grid.Column="1"
 			Style="{StaticResource RightBaseStyle}"
-			SelectedValue="{Binding ElementName=This, Path=Point.Waveform}"
+			SelectedValue="{Binding ElementName=This, Path=Point.WaveformName}"
 			DisplayMemberPath="Name"
+			SelectedValuePath="Name"
 			IsEnabled="{Binding ElementName=This, Path=IsPointEnabled}"
 			ItemsSource="{Binding ElementName=This, Path=Waveforms}" />
-
-		<Label
-			Grid.Row="4"
-			Grid.Column="0"
-			Style="{StaticResource HeaderLabel}"
-			Content="LRDelta: " />
-		<TextBox
-			Grid.Row="4"
-			Grid.Column="1"
-			IsEnabled="{Binding ElementName=This, Path=IsPointEnabled}"
-			Style="{StaticResource RightBaseStyle}"
-			Text="{Binding Mode=TwoWay, ElementName=This, Path=Point.LeftFrequencyDelta}" />
 	</Grid>
 </UserControl>
 

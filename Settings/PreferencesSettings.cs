@@ -34,6 +34,10 @@ namespace SoundMap.Settings
 
 		private void InitAudio()
 		{
+			if (FAudioOutputs != null)
+				foreach (var _ao in FAudioOutputs)
+					_ao.Dispose();
+
 			List<AudioOutput> aos = new List<AudioOutput>();
 
 			FDefaultAudioOutput = null;
@@ -235,6 +239,15 @@ namespace SoundMap.Settings
 			if (!NoteProviders.TryGetValue(NoteProviderName, out var v))
 				v = NoteProviders.First().Value;
 			return (NoteWaveProvider)Activator.CreateInstance(v.Item2);
+		}
+
+		/// <summary>
+		/// Scan/update audio devices
+		/// </summary>
+		public void RescanDevices()
+		{
+			InitAudio();
+			MidiSettings.UpdateDevices();
 		}
 	}
 }

@@ -1,4 +1,5 @@
 ﻿using NAudio.Wave;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 
@@ -18,7 +19,7 @@ namespace SoundMap.NoteWaveProviders
 			Debug.Assert(AFormat.Channels == 2, $"NoteWaveProvider.Init: AFormat.Channels == {AFormat.Channels}");
 		}
 
-		public virtual void Read(Note[] notes, float[] buffer, int inclusiveFrom, int exclusiveTo, double masterVolume)
+		public virtual void Read(Note[] notes, float[] buffer, int inclusiveFrom, int exclusiveTo, NoteWaveArgs args)
 		{
 			Debug.Assert(notes != null, "NoteWaveProvider.Read: notes == null");
 			foreach (var n in notes)

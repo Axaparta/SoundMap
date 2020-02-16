@@ -3,11 +3,12 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using System.Xml.Serialization;
+using SoundMap.NoteWaveProviders;
 
 namespace SoundMap
 {
 	[Serializable]
-	public class AdsrEnvelope: ICloneable, ICLItem
+	public class AdsrEnvelope: ICloneable
 	{
 		private const double Epsilon = 0.01;
 		private const double EpsilonPlus = 1 + Epsilon;
@@ -203,27 +204,25 @@ namespace SoundMap
 
 		public bool StopIgnore => FReleaseTime == 0;
 
-		public float[] CLParams
+		public OpenCLEnvelope GetOpenCL()
 		{
-			get => new float[]
-				{
-					(float)FAttakK,
-					(float)FAttacTime,
+			return new OpenCLEnvelope()
+			{
+				attakK = (float)FAttakK,
+				attacTime = (float)FAttacTime,
 
-					(float)FDecayK,
-					(float)FDecayTime,
+				decayK = (float)FDecayK,
+				decayTime = (float)FDecayTime,
 
-					(float)FReleaseK,
-					(float)FReleaseTime,
+				releaseK = (float)FReleaseK,
+				releaseTime = (float)FReleaseTime,
 
-					(double.IsNaN(FStartTime)? -1: (float)FStartTime),
-					(double.IsNaN(FStopTime)? -1: (float)FStopTime),
-					(float)FStopValue,
-					(float)SustainLevel
-				};
+				startTime = (double.IsNaN(FStartTime) ? -1 : (float)FStartTime),
+				stopTime = (double.IsNaN(FStopTime) ? -1 : (float)FStopTime),
+				stopValue = (float)FStopValue,
+				sustainLevel = (float)SustainLevel
+			};
 		}
-
-		public static int CLParamSize => 10;
 
 		object ICloneable.Clone()
 		{
@@ -235,6 +234,11 @@ namespace SoundMap
 			var r = (AdsrEnvelope)MemberwiseClone();
 			r.SustainLevel = this.SustainLevel;
 			return r;
+		}
+
+		public override int GetHashCode()
+		{
+			return FAttakK.GetHashCode() ^ FDecayK.GetHashCode() ^ SustainLevel.GetHashCode() ^ FReleaseK.GetHashCode();
 		}
 	}
 }

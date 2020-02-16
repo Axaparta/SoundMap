@@ -11,6 +11,8 @@ namespace DeepSound.Controls
 {
 	public class RoundScroller: Control
 	{
+		internal static double PixelsPerDip { get; private set; }
+
 		private bool FIsMouseDown = false;
 		private Point FCenter = new Point();
 		private double FLeftRightTab2 = 0;
@@ -22,6 +24,7 @@ namespace DeepSound.Controls
 			Focusable = true;
 			MinHeight = 20;
 			MinWidth = 20;
+			PixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
 		}
 
 		private FormattedText CreateFormattedText(string AText, Brush ATextBrush)
@@ -32,7 +35,7 @@ namespace DeepSound.Controls
 				this.FlowDirection,
 				new Typeface(this.FontFamily, this.FontStyle, this.FontWeight, this.FontStretch),
 				this.FontSize,
-				ATextBrush);
+				ATextBrush, PixelsPerDip);
 		}
 
 		private double PercentToAngle(double APercent)

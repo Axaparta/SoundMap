@@ -77,7 +77,12 @@
 			</MenuItem>
 		</Menu>
 		<StatusBar DockPanel.Dock="Bottom" IsManipulationEnabled="True">
-			<TextBlock Text="{Binding Status}" FontFamily="Consolas" />
+			<TextBlock
+				Width="330"
+				Text="{Binding Status}" FontFamily="Consolas" />
+			<Separator />
+			<TextBlock
+				Text="{Binding Project.PointsInfo}"/>
 		</StatusBar>
 		<Grid Margin="5,0,5,5">
 			<Grid.RowDefinitions>
@@ -106,13 +111,13 @@
 
 			</Grid>
 
-			<StackPanel
-				Grid.Row="2"
+			<DockPanel
 				VerticalAlignment="Top"
-				HorizontalAlignment="Left"
-				Orientation="Horizontal"
-				Grid.ColumnSpan="2">
-				<GroupBox Header="Note" BorderThickness="1">
+				HorizontalAlignment="Stretch"
+				Grid.Row="2"
+				Grid.ColumnSpan="2" LastChildFill="True">
+
+				<GroupBox Header="Point" BorderThickness="1">
 					<localControls:SoundPointControl
 						Point="{Binding Project.SelectedPoint}"
 						Waveforms="{Binding Project.Waveforms}"
@@ -120,12 +125,14 @@
 						VerticalContentAlignment="Center"
 						DockPanel.Dock="Left" />
 				</GroupBox>
-				<GroupBox Margin="5,0,0,0" Header="ADSR" VerticalAlignment="Top">
+				<GroupBox
+					Margin="5,0,0,0" Header="ADSR envelope"
+					VerticalAlignment="Stretch">
 					<localControls:AdsrEnvelopeControl
 						Project="{Binding Project}"
 						Envelope="{Binding Project.Envelope}" />
 				</GroupBox>
-				<GroupBox Margin="5,0,0,0" Header="Note source" VerticalAlignment="Top">
+				<GroupBox Margin="5,0,0,0" Header="Note source" VerticalAlignment="Stretch">
 					<StackPanel Margin="5">
 						<StackPanel.Resources>
 							<Style TargetType="RadioButton">
@@ -139,50 +146,60 @@
 							Content="Continue one"
 							IsChecked="{Binding Path=Project.NoteSource, Converter={StaticResource NoteSouceToBool}, ConverterParameter={x:Static local:NoteSourceEnum.ContinueOne}}" />
 						<RadioButton
-							Content="Keyboard"
+							Content="Keyboard/MIDI"
 							IsChecked="{Binding Path=Project.NoteSource, Converter={StaticResource NoteSouceToBool}, ConverterParameter={x:Static local:NoteSourceEnum.Keyboard}}" />
-						<RadioButton
-							Content="MIDI"
-							IsEnabled="{Binding SettingsProxy.Preferences.Midi.HasMidiInput}"
-							IsChecked="{Binding Path=Project.NoteSource, Converter={StaticResource NoteSouceToBool}, ConverterParameter={x:Static local:NoteSourceEnum.MIDI}}" />
 						<ToggleButton
 							Padding="5"
 							Content="Note panic" Command="{Binding NotePanicCommand}" />
 					</StackPanel>
 				</GroupBox>
-			</StackPanel>
 
-			<StackPanel
-				Orientation="Horizontal"
-				Grid.Row="1" Grid.Column="0"
-				HorizontalAlignment="Right">
-				<dsControls:VerticalScroller
-				MaxValue="2"
-				Value="{Binding Project.MasterVolume, Mode=TwoWay}"
-				MinValue="0"
-				Title="Master" >
-					<dsControls:VerticalScroller.ValueForeground>
-						<SolidColorBrush Color="{DynamicResource {x:Static SystemColors.GrayTextColorKey}}"/>
-					</dsControls:VerticalScroller.ValueForeground>
-					<dsControls:VerticalScroller.ValueBackground>
-						<SolidColorBrush Color="{DynamicResource {x:Static SystemColors.ControlColorKey}}"/>
-					</dsControls:VerticalScroller.ValueBackground>
-					<dsControls:VerticalScroller.FocusForeground>
-						<SolidColorBrush Color="{DynamicResource {x:Static SystemColors.ControlTextColorKey}}"/>
-					</dsControls:VerticalScroller.FocusForeground>
-				</dsControls:VerticalScroller>
-				<dsControls:VolumeMeter
+				<StackPanel
+					Orientation="Horizontal"
+					DockPanel.Dock="Right"
+					HorizontalAlignment="Right">
+					<dsControls:VerticalScroller
+						MaxValue="2"
+						Value="{Binding Project.MasterVolume, Mode=TwoWay}"
+						MinValue="0"
+						Title="Master" >
+						<dsControls:VerticalScroller.ValueForeground>
+							<SolidColorBrush Color="{DynamicResource {x:Static SystemColors.GrayTextColorKey}}"/>
+						</dsControls:VerticalScroller.ValueForeground>
+						<dsControls:VerticalScroller.ValueBackground>
+							<SolidColorBrush Color="{DynamicResource {x:Static SystemColors.ControlColorKey}}"/>
+						</dsControls:VerticalScroller.ValueBackground>
+						<dsControls:VerticalScroller.FocusForeground>
+							<SolidColorBrush Color="{DynamicResource {x:Static SystemColors.ControlTextColorKey}}"/>
+						</dsControls:VerticalScroller.FocusForeground>
+					</dsControls:VerticalScroller>
+					<dsControls:VolumeMeter
 					CellSize="10"
-					Width="50">
-					<dsControls:VolumeMeter.GaudeGradient>
-						<GradientStopCollection>
-							<GradientStop Color="Red" Offset="1" />
-							<GradientStop Color="Orange" Offset="0.8" />
-							<GradientStop Color="Green" Offset="0" />
-						</GradientStopCollection>
-					</dsControls:VolumeMeter.GaudeGradient>
-				</dsControls:VolumeMeter>
-			</StackPanel>
+					LeftVolume="{Binding Project.LVolume}"
+					RightVolume="{Binding Project.RVolume}"
+					Width="30">
+						<dsControls:VolumeMeter.CellInactiveBrush>
+							<SolidColorBrush Color="{DynamicResource {x:Static SystemColors.ControlDarkDarkColorKey}}"/>
+						</dsControls:VolumeMeter.CellInactiveBrush>
+						<dsControls:VolumeMeter.GaudeGradient>
+							<GradientStopCollection>
+								<GradientStop Color="DarkRed" Offset="1" />
+								<GradientStop Color="DarkOrange" Offset="0.8" />
+								<GradientStop Color="Green" Offset="0.7" />
+								<GradientStop Color="DarkGreen" Offset="0" />
+							</GradientStopCollection>
+						</dsControls:VolumeMeter.GaudeGradient>
+					</dsControls:VolumeMeter>
+				</StackPanel>
+
+				<GroupBox
+					Margin="5,0"
+					Header="Custom waveform">
+					<localControls:CustomWaveformControl
+						VerticalAlignment="Stretch"
+						Project="{Binding Project}" />
+				</GroupBox>
+			</DockPanel>
 		</Grid>
 	</DockPanel>
 

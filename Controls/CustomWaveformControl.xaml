@@ -1,0 +1,137 @@
+﻿<UserControl
+	x:Class="SoundMap.Controls.CustomWaveformControl"
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+	xmlns:sys="clr-namespace:System;assembly=System"
+	xmlns:local="clr-namespace:SoundMap.Controls"
+	xmlns:oxy="http://oxyplot.org/wpf"
+	mc:Ignorable="d" 
+	Name="This"
+	d:DesignHeight="150" d:DesignWidth="400">
+	<Grid Margin="5">
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="2*"/>
+			<ColumnDefinition
+				MaxWidth="180"
+				MinWidth="100"
+				Width="1*"/>
+		</Grid.ColumnDefinitions>
+
+		<DockPanel
+			LastChildFill="False"
+			Grid.Row="0" Grid.Column="1">
+
+			<DockPanel
+				LastChildFill="True"
+				DockPanel.Dock="Top">
+				<Button
+					DockPanel.Dock="Right"
+					Style="{StaticResource ToolButton}">
+					<Button.Content>
+						<Image
+							Style="{StaticResource IconImage}"
+							Source="/SoundMap;component/Images/Delete.png" />
+					</Button.Content>
+				</Button>
+				<Button
+					Command="{Binding ElementName=This, Path=AddWaveformCommand}"
+					DockPanel.Dock="Right"
+					Style="{StaticResource ToolButton}">
+					<Button.Content>
+						<Image
+							Style="{StaticResource IconImage}"
+							Source="/SoundMap;component/Images/Add.png" />
+					</Button.Content>
+				</Button>
+				<ComboBox
+					DisplayMemberPath="Name" 
+					ItemsSource="{Binding ElementName=This, Path=Project.CustomWaveforms}"
+					SelectedItem="{Binding ElementName=This, Path=SelectedWaveform}"
+					Name="NamesComboBox"
+					HorizontalAlignment="Stretch"
+					VerticalAlignment="Center"
+					DockPanel.Dock="Left" IsEditable="True" SelectionChanged="NamesComboBox_SelectionChanged" TextInput="NamesComboBox_TextInput" />
+			</DockPanel>
+
+			<DockPanel
+				Margin="0, 5, 0, 0"
+				DockPanel.Dock="Top" >
+				<Button
+					DockPanel.Dock="Right"
+					Style="{StaticResource ToolButton}">
+					<Button.Content>
+						<Image
+							Style="{StaticResource IconImage}"
+							Source="/SoundMap;component/Images/openHS.png" />
+					</Button.Content>
+				</Button>
+				<Button
+					DockPanel.Dock="Right"
+					Style="{StaticResource ToolButton}">
+					<Button.Content>
+						<Image
+							Style="{StaticResource IconImage}"
+							Source="/SoundMap;component/Images/saveHS.png" />
+					</Button.Content>
+				</Button>
+				<Button
+					Command="{Binding ElementName=This, Path=ApplyWaveformCommand}"
+					DockPanel.Dock="Left"
+					Width="Auto"
+					Margin="0"
+					Style="{StaticResource ToolButton}">
+					<Button.Content>
+						<Image
+							Style="{StaticResource IconImage}"
+							Source="/SoundMap;component/Images/Apply.png" />
+					</Button.Content>
+				</Button>
+			</DockPanel>
+			<WrapPanel
+				Margin="0, 5, 0, 0"
+				DockPanel.Dock="Top"
+				Orientation="Horizontal">
+				<Button
+					Command="{Binding ElementName=WaveformConturControl, Path=ResetFilterCommand}"
+					Margin="0"
+					Content="RST"
+					Style="{StaticResource ToolButton}" />
+				<Button
+					Content="NR"
+					Command="{Binding ElementName=WaveformConturControl, Path=NormalizeFilterCommand}"
+					Style="{StaticResource ToolButton}" />
+				<Button
+					Command="{Binding ElementName=WaveformConturControl, Path=MedianaFilterCommand}"
+					Content="MD"
+					Style="{StaticResource ToolButton}" />
+				<Button
+					Command="{Binding ElementName=WaveformConturControl, Path=HalfOffsetFilterCommand}"
+					Content="H2"
+					Style="{StaticResource ToolButton}" />
+
+				<Button
+					Command="{Binding ElementName=WaveformConturControl, Path=SineGenerateFilterCommand}"
+					Content="SIN"
+					Margin="0,5,0,0"
+					Style="{StaticResource ToolButton}" />
+			</WrapPanel>
+		</DockPanel>
+
+		<local:ConturControl
+			x:Name="WaveformConturControl"
+			OneHerz="{Binding ElementName=This, Path=SelectedWaveform.OneHerz, Mode=TwoWay}"
+			Margin="0,0,5,0"
+			DrawContur="True"
+			VerticalAlignment="Stretch"
+			HorizontalAlignment="Stretch"
+			Grid.Row="0" Grid.Column="0"
+			Background="#FF17322A" PointFill="#FF4EE05B">
+			<local:ConturControl.LinePen>
+				<Pen Thickness="1" Brush="#FF2BA035" />
+			</local:ConturControl.LinePen>
+		</local:ConturControl>
+
+	</Grid>
+</UserControl>

@@ -1,4 +1,6 @@
-﻿using System.Windows;
+﻿using SoundMap.Waveforms;
+using System.Collections.ObjectModel;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 
@@ -40,11 +42,11 @@ namespace SoundMap.Controls
 		}
 
 		public static readonly DependencyProperty WaveformsProperty = DependencyProperty.Register(
-			"Waveforms", typeof(Waveform[]), typeof(SoundPointControl), new FrameworkPropertyMetadata(null));
+			"Waveforms", typeof(ObservableCollection<Waveform>), typeof(SoundPointControl), new FrameworkPropertyMetadata(new ObservableCollection<Waveform>()));
 
-		public Waveform[] Waveforms
+		public ObservableCollection<Waveform> Waveforms
 		{
-			get => (Waveform[])GetValue(WaveformsProperty);
+			get => (ObservableCollection<Waveform>)GetValue(WaveformsProperty);
 			set => SetValue(WaveformsProperty, value);
 		}
 

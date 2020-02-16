@@ -1,6 +1,8 @@
 ﻿
+using SoundMap.Waveforms;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Windows;
 using System.Xml.Serialization;
@@ -13,19 +15,29 @@ namespace SoundMap
 	public class SoundPoint : Observable, ICloneable
 	{
 		private bool FIsSelected = false;
-
-		private bool FIsSolo = false;
 		private bool FIsMute = false;
 		private Waveform FWaveform = null;
-		private Waveform FLeftWaveform = null;
-		private double FLFrequencyDelta = 0;
-
 		private double FVolume = 0;
 		private double FFrequency = 0;
+		private string FWaveformName = string.Empty;
 
-		/// <summary>True, когда являвется частью ноты. Необходима для оптимизации</summary>
 		[XmlIgnore]
-		public bool IsNote { get; set; } = false;
+		public SoundProject Project { get; set; }
+
+		[XmlIgnore]
+		public double LeftPct { get; private set; } = 1;
+		[XmlIgnore]
+		public double RightPct { get; private set; } = 1;
+
+		public SoundPoint()
+		{ }
+
+		public SoundPoint(SoundProject project, double frequency, double volume)
+		{
+			Project = project;
+			FFrequency = frequency;
+			FVolume = volume;
+		}
 
 		[XmlIgnore]
 		public bool IsSelected
@@ -41,40 +53,32 @@ namespace SoundMap
 			}
 		}
 
-		public SoundPoint()
-		{ }
-
 		[XmlIgnore]
 		public Waveform Waveform
 		{
 			get
 			{
+				Debug.Assert(Project != null);
+				if (FWaveform == null)
+					FWaveform = Project.GetWaveform(WaveformName);
 				return FWaveform;
-			}
-			set
-			{
-				var wf = value.Clone();
-				var lwf = value.Clone();
-				wf.LinkedWaveforms.Add(lwf);
-				if (FWaveform != null)
-					wf.Init(FWaveform.SampleRate);
-				FWaveform = wf;
-				FLeftWaveform = lwf;
-				WaveformName = FWaveform.Name;
 			}
 		}
 
-		public string WaveformName { get; set; }
-
-		public bool IsSolo
+		public string WaveformName
 		{
-			get => FIsSolo;
+			get
+			{
+				return FWaveformName;
+			}
 			set
 			{
-				if (FIsSolo != value)
+				if (FWaveformName != value)
 				{
-					FIsSolo = value;
-					NotifyPropertyChanged(nameof(IsSolo));
+					FWaveformName = value;
+					FWaveform = null;
+					NotifyPropertyChanged(nameof(WaveformName));
+					NotifyPropertyChanged(nameof(Waveform));
 				}
 			}
 		}
@@ -105,16 +109,16 @@ namespace SoundMap
 		{
 			var p = new SoundPoint()
 			{
-				FFrequency = this.FFrequency,
-				FIsMute = this.FIsMute,
 				FIsSelected = this.FIsSelected,
-				FIsSolo = this.FIsSolo,
-				FWaveform = this.FWaveform.Clone(),
-				FLeftWaveform = this.FLeftWaveform.Clone(),
-				FLFrequencyDelta = this.FLFrequencyDelta,
-				FVolume = this.FVolume
+				FIsMute = this.FIsMute,
+				FFrequency = this.FFrequency,
+				FVolume = this.FVolume,
+				FWaveformName = this.FWaveformName,
+				FWaveform = this.FWaveform
 			};
-
+			p.Project = this.Project;
+			p.LeftPct = this.LeftPct;
+			p.RightPct = this.RightPct;
 			return p;
 		}
 
@@ -131,16 +135,35 @@ namespace SoundMap
 			}
 		}
 
-		public double LeftFrequencyDelta
+		/// <summary>
+		/// -1 = L 100, R 0
+		///  0 = L 100, R 100
+		/// +1 = L 0  , R 100
+		/// </summary>
+		public double LRBalance
 		{
-			get => FLFrequencyDelta;
+			get
+			{
+				if (RightPct < 1)
+					return RightPct - 1;
+				if (LeftPct < 1)
+					return 1 - LeftPct;
+				return 0;
+			}
 			set
 			{
-				if (FLFrequencyDelta != value)
-				{
-					FLFrequencyDelta = value;
-					NotifyPropertyChanged(nameof(LeftFrequencyDelta));
-				}
+				if (value < -1)
+					value = -1;
+				if (value > 1)
+					value = 1;
+
+				LeftPct = 1;
+				RightPct = 1;
+
+				if (value < 0)
+					RightPct = 1 + value;
+				if (value > 0)
+					LeftPct = 1 - value;
 			}
 		}
 
@@ -162,17 +185,13 @@ namespace SoundMap
 			return Frequency.ToString("F2");
 		}
 
-		public string AsString => ToString();
+		//public string AsString => ToString();
 
-		public SoundPointValue GetValue(double ATime)
-		{
-			var rv = FWaveform.GetValue(ATime, FFrequency);
-			double lv = rv;
-
-			if (FLFrequencyDelta != 0)
-				lv = FLeftWaveform.GetValue(ATime, FFrequency + FLFrequencyDelta);
-
-			return new SoundPointValue(lv, rv);
-		}
+		//public SoundPointValue GetValue(double ATime)
+		//{
+		//	var rv = FWaveform.GetValue(ATime, FFrequency);
+		//	rv = rv * Volume;
+		//	return new SoundPointValue(rv*LeftPct, rv*RightPct);
+		//}
 	}
 }

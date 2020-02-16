@@ -5,12 +5,12 @@ using System.Collections.Generic;
 
 namespace SoundMap.Settings
 {
-	public class AudioOutput : Observable
+	public class AudioOutput : Observable, IDisposable
 	{
 		private static readonly string[] WasapiChannels = new string[] { "Stereo" };
 		private static readonly int[] AsioSampleRates = new int[] { 44100, 48000, 96000, 192000 };
 
-		private readonly MMDevice FMmDevice;
+		private MMDevice FMmDevice;
 		private readonly string FAsioName;
 
 		public string Name { get; }
@@ -78,6 +78,15 @@ namespace SoundMap.Settings
 				
 
 			throw new NotImplementedException();
+		}
+
+		public void Dispose()
+		{
+			if (FMmDevice != null)
+			{
+				FMmDevice.Dispose();
+				FMmDevice = null;
+			}
 		}
 	}
 }

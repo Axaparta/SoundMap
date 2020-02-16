@@ -1,15 +1,68 @@
 ﻿using Cloo;
 using Cloo.Bindings;
 using NAudio.Wave;
+using SoundMap.Waveforms;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace SoundMap.NoteWaveProviders
 {
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
+	public struct OpenCLPointInfo
+	{
+		public float ampl;
+		public float freq;
+		public float leftPct;
+		public float rightPct;
+		public int wfIndex;
+		public int isMute;
+	}
+
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
+	public struct OpenCLInfo
+	{
+		public float startTime;
+		public float timeDelta;
+		public int sampleRate;
+		public float masterVolume;
+		public uint inclusiveFrom;
+
+		public uint noteCount;
+		// Points per note
+		public uint pointCount;
+	}
+
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
+	public struct OpenCLEnvelope
+	{
+		public float attakK;
+		public float attacTime;
+
+		public float decayK;
+		public float decayTime;
+
+		public float releaseK;
+		public float releaseTime;
+
+		public float startTime;
+		public float stopTime;
+		public float stopValue;
+		public float sustainLevel;
+	}
+
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
+	public struct OpenCLNote
+	{
+		public OpenCLEnvelope envelope;
+		public float volume;
+	}
+
 	[NoteWave("OpenCL", true)]
 	public class OpenCLWaveProvider : NoteWaveProvider, IDisposable
 	{
@@ -20,33 +73,17 @@ namespace SoundMap.NoteWaveProviders
 		private ComputeKernel kernel = null;
 		private ComputeCommandQueue commands = null;
 		private readonly string FProgramSource;
+		private int FOldSamplesHash = 0;
+
+		ComputeBuffer<float> FWaveformBuffer = null;
 
 		private Stopwatch sw = Stopwatch.StartNew();
-
-		//private ComputeEventList eventList = new ComputeEventList();
-
-		//static void PrintManifestResourceNames()
-		//{
-		//	var exass = Assembly.GetExecutingAssembly();
-		//	//var exass = typeof(GLCL.Drawing2D.Program2D).Assembly;
-
-		//	Console.WriteLine("Buildin resources:");
-		//	foreach (var s in exass.GetManifestResourceNames())
-		//		Console.WriteLine("  " + s);
-
-		//	Console.WriteLine();
-		//}
 
 		public OpenCLWaveProvider()
 		{
 			using (var s = Assembly.GetAssembly(typeof(OpenCLWaveProvider)).GetManifestResourceStream("SoundMap.NoteWaveProviders.WaveProgram.cl"))
 			using (var tr = new StreamReader(s, Encoding.UTF8))
 				FProgramSource = tr.ReadToEnd();
-		}
-
-		public static void BN(CLProgramHandle programHandle, IntPtr notifyDataPtr)
-		{
-
 		}
 
 		public override void Init(WaveFormat AFormat)
@@ -80,9 +117,7 @@ namespace SoundMap.NoteWaveProviders
 
 		public void Dispose()
 		{
-			//foreach (var e in eventList)
-			//	e.Dispose();
-			//eventList.Clear();
+			FWaveformBuffer.Dispose();
 
 			commands.Dispose();
 			kernel.Dispose();
@@ -91,11 +126,21 @@ namespace SoundMap.NoteWaveProviders
 			FDevice = null;
 		}
 
-		public override void Read(Note[] notes, float[] buffer, int inclusiveFrom, int exclusiveTo, double masterVolume)
+		public override void Read(Note[] notes, float[] buffer, int inclusiveFrom, int exclusiveTo, NoteWaveArgs args)
 		{
 			var s = sw.ElapsedMilliseconds;
 
-			base.Read(notes, buffer, inclusiveFrom, exclusiveTo, masterVolume);
+			if ((FOldSamplesHash != args.SamplesHash) || (FOldSamplesHash == 0))
+			{
+				FOldSamplesHash = args.SamplesHash;
+				InitSampleArgs(args.Samples);
+			}
+
+			Dictionary<int, int> wfIndexDict = new Dictionary<int, int>();
+			for (int i = 0; i < args.Samples.Length; i++)
+				wfIndexDict.Add(args.Samples[i].Key.GetHashCode(), i);
+
+			base.Read(notes, buffer, inclusiveFrom, exclusiveTo, args);
 			int timeChannelsCount = exclusiveTo - inclusiveFrom;
 
 			int nCount = notes.Length;
@@ -103,10 +148,21 @@ namespace SoundMap.NoteWaveProviders
 			if (nCount > 0)
 				pCount = notes[0].Points.Length;
 
-			float[] args = new float[] { (float)FTime, (float)FTimeDelta, inclusiveFrom, nCount, pCount, (float)masterVolume };
-			float[] ampl = new float[nCount * pCount];
-			float[] freq = new float[nCount * pCount];
-			float[] envs = new float[nCount * AdsrEnvelope.CLParamSize];
+			OpenCLInfo info = new OpenCLInfo()
+			{
+				startTime = (float)FTime,
+				timeDelta = (float)FTimeDelta,
+				sampleRate = Format.SampleRate,
+				noteCount = (uint)nCount,
+				pointCount = (uint)pCount,
+				masterVolume = (float)args.MasterVolume
+			};
+
+			info.inclusiveFrom = (uint)inclusiveFrom;
+
+			OpenCLPointInfo[] points = new OpenCLPointInfo[nCount * pCount];
+
+			OpenCLNote[] envs = new OpenCLNote[nCount];
 			float[] result = new float[timeChannelsCount];
 
 			int index = 0;
@@ -114,11 +170,23 @@ namespace SoundMap.NoteWaveProviders
 			{
 				for (int p = 0; p < pCount; p++, index++)
 				{
-					ampl[index] = (float)notes[n].Points[p].Volume;
-					freq[index] = (float)notes[n].Points[p].Frequency;
+					points[index] = new OpenCLPointInfo()
+					{
+						ampl = (float)notes[n].Points[p].Volume,
+						freq = (float)notes[n].Points[p].Frequency,
+						leftPct = (float)notes[n].Points[p].LeftPct,
+						rightPct = (float)notes[n].Points[p].RightPct,
+						wfIndex = -1,
+						isMute = (byte)(notes[n].Points[p].IsMute ? 1 : 0)
+					};
+					if (wfIndexDict.TryGetValue(notes[n].Points[p].Waveform.GetHashCode(), out var wfi))
+						points[index].wfIndex = wfi;
 				}
-				var env = notes[n].Envelope.CLParams;
-				Array.Copy(env, 0, envs, n * AdsrEnvelope.CLParamSize, AdsrEnvelope.CLParamSize);
+				envs[n] = new OpenCLNote()
+				{
+					envelope = notes[n].Envelope.GetOpenCL(),
+					volume = (float)notes[n].Volume
+				};
 			}
 
 			long br = 0, ar = 0, ac = 0;
@@ -127,7 +195,7 @@ namespace SoundMap.NoteWaveProviders
 			{
 				br = sw.ElapsedMilliseconds;
 
-				Run(args, ampl, freq, envs, result);
+				Run(new OpenCLInfo[] { info }, points, envs, result);
 
 				ar = sw.ElapsedMilliseconds;
 
@@ -135,7 +203,20 @@ namespace SoundMap.NoteWaveProviders
 					Debug.WriteLine("");
 
 				for (int i = 0, j = inclusiveFrom; i < result.Length; i++, j++)
-					buffer[j] = result[i];
+				{
+					var fR = result[i];
+					if (fR > args.MaxR)
+						args.MaxR = fR;
+					buffer[j] = fR;
+
+					i++; j++;
+
+					var fL = result[i];
+					if (fL > args.MaxL)
+						args.MaxL = fL;
+					buffer[j] = fL;
+				}
+					
 
 				ac = sw.ElapsedMilliseconds;
 			}
@@ -151,19 +232,44 @@ namespace SoundMap.NoteWaveProviders
 				Debug.WriteLine($"OpenCLWaveProvider.Read: tot {gc - s}");
 		}
 
-		private void Run(float[] args, float[] ampl, float[] freq, float[] envs, float[] result)
+		private void InitSampleArgs(KeyValuePair<int, double[]>[] samples)
+		{
+			if (FWaveformBuffer != null)
+				FWaveformBuffer.Dispose();
+
+			List<float> s = new List<float>(samples.Length * Format.SampleRate);
+
+			// double array to float array
+			foreach (var si in samples)
+			{
+				float[] buf = new float[si.Value.Length];
+				for (int i = 0; i < si.Value.Length; i++)
+					buf[i] = (float)si.Value[i];
+				s.AddRange(buf);
+			}
+
+			// array can't be empty
+			if (s.Count == 0)
+				s.Add(0);
+
+			FWaveformBuffer = new ComputeBuffer<float>(FContext, ComputeMemoryFlags.ReadOnly | ComputeMemoryFlags.CopyHostPointer, s.ToArray());
+
+			kernel.SetMemoryArgument(2, FWaveformBuffer);
+		}
+
+		private void Run(OpenCLInfo[] info, OpenCLPointInfo[] points, OpenCLNote[] envs, float[] result)
 		{
 			//var s = sw.ElapsedMilliseconds;
 
-			ComputeBuffer<float> argsBuffer = new ComputeBuffer<float>(FContext, ComputeMemoryFlags.ReadOnly | ComputeMemoryFlags.CopyHostPointer, args);
-			ComputeBuffer<float> amplBuffer = new ComputeBuffer<float>(FContext, ComputeMemoryFlags.ReadOnly | ComputeMemoryFlags.CopyHostPointer, ampl);
-			ComputeBuffer<float> freqBuffer = new ComputeBuffer<float>(FContext, ComputeMemoryFlags.ReadOnly | ComputeMemoryFlags.CopyHostPointer, freq);
-			ComputeBuffer<float> envsBuffer = new ComputeBuffer<float>(FContext, ComputeMemoryFlags.ReadOnly | ComputeMemoryFlags.CopyHostPointer, envs);
+			ComputeBuffer<OpenCLInfo> infoBuffer = new ComputeBuffer<OpenCLInfo>(FContext, ComputeMemoryFlags.ReadOnly | ComputeMemoryFlags.CopyHostPointer, info);
+			ComputeBuffer<OpenCLPointInfo> pointsBuffer = new ComputeBuffer<OpenCLPointInfo>(FContext, ComputeMemoryFlags.ReadOnly | ComputeMemoryFlags.CopyHostPointer, points);
+
+			ComputeBuffer<OpenCLNote> envsBuffer = new ComputeBuffer<OpenCLNote>(FContext, ComputeMemoryFlags.ReadOnly | ComputeMemoryFlags.CopyHostPointer, envs);
 			ComputeBuffer<float> resultBuffer = new ComputeBuffer<float>(FContext, ComputeMemoryFlags.WriteOnly, result.Length);
 
-			kernel.SetMemoryArgument(0, argsBuffer);
-			kernel.SetMemoryArgument(1, amplBuffer);
-			kernel.SetMemoryArgument(2, freqBuffer);
+			kernel.SetMemoryArgument(0, infoBuffer);
+			kernel.SetMemoryArgument(1, pointsBuffer);
+			// 2 - FWaveformBuffer
 			kernel.SetMemoryArgument(3, envsBuffer);
 			kernel.SetMemoryArgument(4, resultBuffer);
 
@@ -179,9 +285,8 @@ namespace SoundMap.NoteWaveProviders
 
 			commands.Finish();
 
-			argsBuffer.Dispose();
-			amplBuffer.Dispose();
-			freqBuffer.Dispose();
+			infoBuffer.Dispose();
+			pointsBuffer.Dispose();
 			envsBuffer.Dispose();
 			resultBuffer.Dispose();
 

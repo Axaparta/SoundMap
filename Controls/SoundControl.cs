@@ -59,12 +59,6 @@ namespace SoundMap.Controls
 					drawingContext.DrawText(t, stp);
 					stp.X += t.Width;
 				}
-
-				if (Link.IsSolo)
-				{
-					FormattedText t = new FormattedText("S", CultureInfo.InvariantCulture, FlowDirection.LeftToRight, tf, 12, SoloTextBrush, SoundControl.PixelsPerDip);
-					drawingContext.DrawText(t, stp);
-				}
 			}
 
 			public bool Contain(Point APoint)

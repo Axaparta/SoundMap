@@ -4,7 +4,6 @@
 	{
 		None,
 		ContinueOne,
-		Keyboard,
-		MIDI
+		Keyboard
 	}
 }

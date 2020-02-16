@@ -15,7 +15,6 @@ namespace SoundMap
 
 	public class Note
 	{
-		private readonly AdsrEnvelope FEnvelope;
 		private NotePhase FToSetPhase = NotePhase.Playing;
 		private NotePhase FPhase = NotePhase.Init;
 		private double FStartTime = double.NaN;
@@ -23,12 +22,13 @@ namespace SoundMap
 		public SoundPoint[] Points { get; set; }
 		public object Key { get; }
 		public double Volume { get; set; } = 1;
+		public AdsrEnvelope Envelope { get; }
 
 		public Note(SoundPoint[] APoints, WaveFormat AFormat, object AKey, AdsrEnvelope AEnvelope, double AVolume = 1)
 		{
 			Points = APoints;
 			Key = AKey;
-			FEnvelope = AEnvelope;
+			Envelope = AEnvelope;
 		}
 
 		public NotePhase Phase
@@ -36,8 +36,6 @@ namespace SoundMap
 			get => FPhase;
 			set => FToSetPhase = value;
 		}
-
-		public AdsrEnvelope Envelope => FEnvelope;
 
 		public void UpdatePhase(double ATime)
 		{
@@ -47,16 +45,16 @@ namespace SoundMap
 					FToSetPhase = NotePhase.None;
 					FPhase = NotePhase.Playing;
 					FStartTime = ATime;
-					FEnvelope.Start(ATime);
+					Envelope.Start(ATime);
 					break;
 				case NotePhase.Stopping:
 					FToSetPhase = NotePhase.None;
 					FPhase = NotePhase.Stopping;
-					FEnvelope.Stop(ATime);
+					Envelope.Stop(ATime);
 					break;
 			}
 
-			if ((FPhase == NotePhase.Stopping) && FEnvelope.IsDone(ATime))
+			if ((FPhase == NotePhase.Stopping) && Envelope.IsDone(ATime))
 				FPhase = NotePhase.Done;
 		}
 
@@ -71,18 +69,15 @@ namespace SoundMap
 					continue;
 
 				max += p.Volume;
-				var v = p.Volume * p.GetValue(t);
 
-				if (p.IsSolo)
-					return v;
-
-				r += v;
+				var v = p.Volume * p.Waveform.GetValue(t, p.Frequency);
+				r += new SoundPointValue(v * p.LeftPct, v * p.RightPct);
 			}
 
 			if (max > 1)
 				r /= max;
 
-			r *= FEnvelope.GetValue(ATime) * Volume;
+			r *= Envelope.GetValue(ATime) * Volume;
 
 			return r;
 		}

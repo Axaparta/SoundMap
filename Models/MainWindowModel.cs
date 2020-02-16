@@ -28,7 +28,6 @@ namespace SoundMap.Models
 		private RelayCommand FNewProjectCommand = null;
 
 		private RelayCommand FIsPauseCommand = null;
-		private RelayCommand FSetNewPointKindCommand = null;
 		private RelayCommand FPreferencesCommand = null;
 		private RelayCommand FProjectPropertiesCommand = null;
 
@@ -319,19 +318,6 @@ namespace SoundMap.Models
 			}
 		}
 
-		public RelayCommand SetNewPointKindCommand
-		{
-			get
-			{
-				if (FSetNewPointKindCommand == null)
-					FSetNewPointKindCommand = new RelayCommand((obj) =>
-					{
-						//Project.NewPointKind = (PointKind)obj;
-					});
-				return FSetNewPointKindCommand;
-			}
-		}
-
 		public RelayCommand PreferencesCommand
 		{
 			get
@@ -344,6 +330,7 @@ namespace SoundMap.Models
 
 						PreferencesWindow wnd = new PreferencesWindow();
 						wnd.Owner = FMainWindow;
+						App.Settings.Preferences.RescanDevices();
 						wnd.DataContext = App.Settings.Preferences.Clone();
 						if (wnd.ShowDialog() == true)
 							App.Settings.Preferences = (PreferencesSettings)wnd.DataContext;
@@ -384,9 +371,7 @@ namespace SoundMap.Models
 					if (non == null)
 					{
 						var nev = e.MidiEvent as NoteEvent;
-						if (nev == null)
-							;// Debug.WriteLine("NoteOn  >> {0}", e.MidiEvent.GetType().Name);
-						else
+						if (nev != null)
 						{
 							if (FPressedNotes.IndexOf(nev.NoteNumber) == -1)
 								return;
@@ -467,6 +452,7 @@ namespace SoundMap.Models
 					Project.AddNoteByHalftone(AKey.Key, 2);
 					break;
 				case Key.M:
+				case Key.J:
 					Project.AddNoteByHalftone(AKey.Key, 3);
 					break;
 				case Key.K: // 2
