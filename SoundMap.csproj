@@ -125,6 +125,13 @@
     <Compile Include="SoundPointCollection.cs" />
     <Compile Include="SoundPointValue.cs" />
     <Compile Include="SoundProject.cs" />
+    <Compile Include="Temperaments\CleanTemperament.cs" />
+    <Compile Include="Temperaments\DiatonicTemperament.cs" />
+    <Compile Include="Temperaments\EqualTemperament.cs" />
+    <Compile Include="Temperaments\Fraction.cs" />
+    <Compile Include="Temperaments\PifagorTemperament.cs" />
+    <Compile Include="Temperaments\Temperament.cs" />
+    <Compile Include="Temperaments\Tone.cs" />
     <Compile Include="Waveforms\BufferWaveform.cs" />
     <Compile Include="Waveforms\CustomWaveform.cs" />
     <Compile Include="Waveforms\SineWaveform.cs" />

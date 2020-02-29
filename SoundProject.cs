@@ -2,6 +2,7 @@
 using NAudio.Wave;
 using SoundMap.NoteWaveProviders;
 using SoundMap.Settings;
+using SoundMap.Temperaments;
 using SoundMap.Waveforms;
 using System;
 using System.Collections.Generic;
@@ -20,7 +21,10 @@ namespace SoundMap
 	[Serializable]
 	public class SoundProject: Observable, ISampleProvider
 	{
+		private static readonly Temperament[] StaticTemperaments = new Temperament[] { new EqualTemperament(), new CleanTemperament(), new PifagorTemperament(1) };
+
 		public static readonly string FileFilter = "SoundMap project (*.smp)|*.smp";
+
 
 		private ProjectSettings FSettings = new ProjectSettings();
 		private NoteSourceEnum FNoteSource = NoteSourceEnum.ContinueOne;
@@ -38,7 +42,8 @@ namespace SoundMap
 		private double FLVolume = 0;
 		private double FRVolume = 0;
 		private DispatcherTimer FVolumeTimer;
-		
+		private Temperament FTemperament = null;
+
 		/// <summary>
 		/// Содержит все вафформы. CustomWaveforms выбирается из него
 		/// </summary>
@@ -401,19 +406,21 @@ namespace SoundMap
 
 			lock (FNotesLock)
 			{
-				FNotes.Add(new Note(a, WaveFormat, AKey, Envelope.Clone()));
+				FNotes.Add(new Note(a, WaveFormat, AKey, Envelope.Clone(), AVolume));
 			}
 		}
 
 		public void AddNoteByHalftone(object AKey, int AHalftoneOffset, double AVolume = 1)
 		{
-			var v = Math.Pow(2, (double)AHalftoneOffset / 12);
-			AddNote(AKey, v, AVolume);
+			//var v = Math.Pow(2, (double)AHalftoneOffset / 12);
+			var t = Temperament.GetKeyboardTone(AHalftoneOffset);
+			if (t != null)
+				AddNote(AKey, t.Frequency, AVolume);
 		}
 
 		public int? GetHalftoneFromMidiNoteNumber(int ANoteIndex)
 		{
-			return ANoteIndex - 57;
+			return ANoteIndex - 60;
 		}
 
 		public bool DeleteNote(object AKey)
@@ -526,6 +533,40 @@ namespace SoundMap
 					foreach (var v in value)
 						Waveforms.Add(v);
 			}
+		}
+
+		public string TemperamentName { get; set; }
+
+		[XmlIgnore]
+		public Temperament Temperament
+		{
+			get
+			{
+				if (FTemperament == null)
+				{
+					FTemperament = StaticTemperaments.FirstOrDefault(t => t.Name == TemperamentName);
+					if (FTemperament == null)
+						FTemperament = StaticTemperaments.First();
+				}
+				return FTemperament;
+			}
+			set
+			{
+				if (TemperamentName != value.Name)
+				{
+					TemperamentName = value.Name;
+					FTemperament = value;
+					NotifyPropertyChanged(nameof(Temperament));
+					NotifyPropertyChanged(nameof(TemperamentName));
+					IsModify = true;
+				}
+			}
+		}
+
+		[XmlIgnore]
+		public Temperament[] Temperaments
+		{
+			get => StaticTemperaments;
 		}
 	}
 }

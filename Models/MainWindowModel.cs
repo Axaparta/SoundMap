@@ -136,10 +136,18 @@ namespace SoundMap.Models
 			{
 				if (FMidiIn != null)
 				{
-					FMidiIn.Stop();
-					FMidiIn.MessageReceived -= MidiIn_MessageReceived;
-					FMidiIn.Dispose();
-					FMidiIn = null;
+					try
+					{
+						FMidiIn.Stop();
+					}
+					catch
+					{ }
+					finally
+					{
+						FMidiIn.MessageReceived -= MidiIn_MessageReceived;
+						FMidiIn.Dispose();
+						FMidiIn = null;
+					}
 				}
 
 				FOutput.Stop();

@@ -151,6 +151,11 @@
 						<ToggleButton
 							Padding="5"
 							Content="Note panic" Command="{Binding NotePanicCommand}" />
+						<ComboBox
+							DisplayMemberPath="Name"
+							SelectedItem="{Binding Project.Temperament}"
+							ItemsSource="{Binding Project.Temperaments}"
+							Margin="0,5,0,0" />
 					</StackPanel>
 				</GroupBox>
 

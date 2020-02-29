@@ -29,6 +29,7 @@ namespace SoundMap
 			Points = APoints;
 			Key = AKey;
 			Envelope = AEnvelope;
+			Volume = AVolume;
 		}
 
 		public NotePhase Phase
